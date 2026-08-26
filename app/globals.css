@@ -1,0 +1,70 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@layer base {
+  :root {
+    --background: 210 20% 97%;
+    --foreground: 210 30% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 30% 12%;
+    --primary: 205 78% 20%; /* #0B3A5B */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 207 80% 35%; /* #1261A0 */
+    --secondary-foreground: 0 0% 100%;
+    --accent: 44 100% 48%; /* #F4B400 */
+    --accent-foreground: 210 30% 12%;
+    --muted: 215 16% 47%;
+    --muted-foreground: 210 20% 97%;
+    --radius: 0.5rem;
+  }
+}
+
+body {
+  background-color: #F5F7FA;
+  color: #17202A;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+.bg-enterprise-gradient {
+  background: linear-gradient(135deg, #0B3A5B 0%, #1261A0 100%);
+}
+
+.gold-accent-border {
+  border-top: 3px solid #F4B400;
+}
+
+.badge-risk-low {
+  background-color: #E8F5E9;
+  color: #138A4B;
+  border: 1px solid #A5D6A7;
+}
+
+.badge-risk-medium {
+  background-color: #FFF8E1;
+  color: #D98200;
+  border: 1px solid #FFE082;
+}
+
+.badge-risk-high {
+  background-color: #FFEBEE;
+  color: #C62828;
+  border: 1px solid #EF9A9A;
+}

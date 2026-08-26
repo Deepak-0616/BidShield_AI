@@ -1,0 +1,199 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String      @id @default(uuid())
+  name         String
+  email        String      @unique
+  passwordHash String
+  role         String      @default("PROCUREMENT_OFFICER") // ADMIN, PROCUREMENT_OFFICER, BIDDER, AUDITOR
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  designation  String?
+  avatar       String?
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  tenders      Tender[]    @relation("CreatedTenders")
+  bids         Bid[]       @relation("SubmittedBids")
+  auditLogs    AuditLog[]
+  chatMessages ChatMessage[]
+}
+
+model Department {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  users   User[]
+  tenders Tender[]
+}
+
+model Tender {
+  id                 String     @id @default(uuid())
+  tenderNumber       String     @unique
+  title              String
+  departmentId       String
+  department         Department @relation(fields: [departmentId], references: [id])
+  category           String
+  description        String
+  estimatedValue     Float
+  submissionDeadline DateTime
+  status             String     @default("OPEN") // DRAFT, ANALYZING, OPEN, CLOSED, UNDER_REVIEW, COMPLETED, ARCHIVED
+  originalDocumentId String?
+  createdBy          String
+  creator            User       @relation("CreatedTenders", fields: [createdBy], references: [id])
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  requirements Requirement[]
+  bids         Bid[]
+  documents    Document[]
+}
+
+model Requirement {
+  id              String   @id @default(uuid())
+  tenderId        String
+  tender          Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  requirementCode String
+  title           String
+  description     String
+  category        String   @default("TECHNICAL") // LEGAL, FINANCIAL, TECHNICAL, EXPERIENCE, DOCUMENTATION, CERTIFICATION, LOCAL_CONTENT, OTHER
+  mandatory       Boolean  @default(true)
+  threshold       String?
+  thresholdUnit   String?
+  sourcePage      Int      @default(1)
+  sourceSection   String?
+  confidence      Float    @default(0.95)
+  ruleType        String   @default("THRESHOLD")
+  createdAt       DateTime @default(now())
+
+  evidences         Evidence[]
+  complianceResults ComplianceResult[]
+}
+
+model Bid {
+  id                String   @id @default(uuid())
+  tenderId          String
+  tender            Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  bidderId          String
+  bidder            User     @relation("SubmittedBids", fields: [bidderId], references: [id])
+  bidderName        String
+  submittedAt       DateTime @default(now())
+  status            String   @default("PROCESSING") // DRAFT, SUBMITTED, PROCESSING, UNDER_REVIEW, COMPLETED
+  complianceScore   Float    @default(0.0)
+  riskScore         Float    @default(0.0)
+  riskLevel         String   @default("MEDIUM") // LOW, MEDIUM, HIGH
+  finalReviewStatus String   @default("UNDER_REVIEW") // PENDING, APPROVED, REJECTED, CLARIFICATION_REQUESTED
+
+  documents         Document[]
+  complianceResults ComplianceResult[]
+  chatMessages      ChatMessage[]
+}
+
+model Document {
+  id               String   @id @default(uuid())
+  bidId            String?
+  bid              Bid?     @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  tenderId         String?
+  tender           Tender?  @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  filename         String
+  documentType     String   @default("OTHER") // GST_CERTIFICATE, PAN, UDYAM, FINANCIAL_STATEMENT, EXPERIENCE_CERTIFICATE, OEM_AUTHORIZATION, ISO_CERTIFICATE, LOCAL_CONTENT_DECLARATION, COMPANY_PROFILE, OTHER
+  mimeType         String   @default("application/pdf")
+  fileSize         Int      @default(0)
+  storagePath      String
+  processingStatus String   @default("PROCESSED") // UPLOADED, PROCESSING, PROCESSED, FAILED
+  extractedText    String?
+  uploadedBy       String?
+  createdAt        DateTime @default(now())
+
+  evidences Evidence[]
+}
+
+model Evidence {
+  id                 String      @id @default(uuid())
+  documentId         String
+  document           Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  requirementId      String
+  requirement        Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  extractedValue     String
+  normalizedValue    String?
+  pageNumber         Int         @default(1)
+  textSnippet        String
+  confidence         Float       @default(0.90)
+  verificationStatus String      @default("UNVERIFIED")
+  createdAt          DateTime    @default(now())
+
+  complianceResults   ComplianceResult[]
+  verificationResults VerificationResult[]
+}
+
+model ComplianceResult {
+  id            String      @id @default(uuid())
+  bidId         String
+  bid           Bid         @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  requirementId String
+  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  status        String      @default("UNVERIFIED") // COMPLIANT, PARTIAL, NON_COMPLIANT, MISSING, UNVERIFIED, MANUAL_REVIEW
+  score         Float       @default(0.0)
+  reason        String
+  evidenceId    String?
+  evidence      Evidence?   @relation(fields: [evidenceId], references: [id])
+  aiExplanation String?
+  humanComment  String?
+  reviewedBy    String?
+  reviewedAt    DateTime?
+}
+
+model VerificationResult {
+  id              String    @id @default(uuid())
+  evidenceId      String?
+  evidence        Evidence? @relation(fields: [evidenceId], references: [id])
+  provider        String    @default("GST") // GST, PAN, UDYAM, MCA, OEM, DIGILOCKER, CUSTOM
+  referenceNumber String
+  status          String    @default("VERIFIED")
+  responseSummary String
+  verifiedAt      DateTime  @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  userName   String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   String?
+  ipAddress  String?  @default("127.0.0.1")
+  createdAt  DateTime @default(now())
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  bidId     String?
+  bid       Bid?     @relation(fields: [bidId], references: [id])
+  role      String
+  message   String
+  citations String?
+  createdAt DateTime @default(now())
+}
+
+model RuleSetting {
+  id              String   @id @default(uuid())
+  category        String   @unique
+  weight          Float    @default(1.0)
+  mandatoryImpact Float    @default(30.0)
+  updatedAt       DateTime @updatedAt
+}
