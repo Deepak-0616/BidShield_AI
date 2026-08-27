@@ -26,7 +26,11 @@ import {
   Cell,
 } from 'recharts';
 
+import RoleGuard from '@/components/auth/RoleGuard';
+import { useAuth } from '@/lib/auth-context';
+
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -67,24 +71,27 @@ export default function DashboardPage() {
   ];
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6 max-w-7xl mx-auto">
-        {/* Title Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
-          <div>
-            <h1 className="text-2xl font-black text-[#0B3A5B] tracking-tight">Procurement Intelligence Dashboard</h1>
-            <p className="text-xs text-slate-500 mt-1">Live database monitoring & AI compliance overview</p>
+    <RoleGuard allowedRoles={['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR']}>
+      <DashboardLayout>
+        <div className="space-y-6 max-w-7xl mx-auto">
+          {/* Title Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+            <div>
+              <h1 className="text-2xl font-black text-[#0B3A5B] tracking-tight">Procurement Intelligence Dashboard</h1>
+              <p className="text-xs text-slate-500 mt-1">Live database monitoring & AI compliance overview</p>
+            </div>
+            {user?.role !== 'AUDITOR' && (
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/tenders/new"
+                  className="px-4 py-2 bg-[#0B3A5B] text-white text-xs font-bold rounded-lg shadow hover:bg-[#082C46] transition flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>New Tender + AI Extractor</span>
+                </Link>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/tenders/new"
-              className="px-4 py-2 bg-[#0B3A5B] text-white text-xs font-bold rounded-lg shadow hover:bg-[#082C46] transition flex items-center gap-2"
-            >
-              <FileText className="w-4 h-4" />
-              <span>New Tender + AI Extractor</span>
-            </Link>
-          </div>
-        </div>
 
         {/* Live Statistics Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -311,5 +318,7 @@ export default function DashboardPage() {
         </div>
       </div>
     </DashboardLayout>
+    </RoleGuard>
   );
 }
+
