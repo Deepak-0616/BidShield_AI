@@ -1,10 +1,12 @@
 {
-  "/api/auth/logout/route": "app/api/auth/logout/route.js",
-  "/login/page": "app/login/page.js",
-  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/page": "app/page.js",
   "/api/auth/me/route": "app/api/auth/me/route.js",
+  "/login/page": "app/login/page.js",
   "/bidder/dashboard/page": "app/bidder/dashboard/page.js",
   "/tenders/page": "app/tenders/page.js",
   "/api/bids/route": "app/api/bids/route.js",
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/tenders/[id]/requirements/page": "app/tenders/[id]/requirements/page.js",
+  "/api/tenders/[id]/route": "app/api/tenders/[id]/route.js",
   "/api/tenders/route": "app/api/tenders/route.js"
 }

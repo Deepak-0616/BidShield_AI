@@ -1,4 +1,4 @@
-// File: C:\Users\deepa\Desktop\Deepak\github\BidShield_AI\app\tenders\[id]\requirements\page.tsx
+// File: E:\My_Projects\Github Files\Ongoing\BidShield_AI\app\tenders\[id]\requirements\page.tsx
 import * as entry from '../../../../../../app/tenders/[id]/requirements/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

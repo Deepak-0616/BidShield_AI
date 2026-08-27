@@ -167,7 +167,7 @@ export default function BidDetailDemoPage() {
                 <span className="px-2.5 py-0.5 rounded bg-[#0B3A5B]/10 text-[#0B3A5B] font-bold text-[10px]">
                   {bid?.tender?.tenderNumber}
                 </span>
-                <span className="text-xs text-slate-500 font-medium">Submitted {new Date(bid?.submittedAt).toLocaleDateString()}</span>
+                <span className="text-xs text-slate-500 font-medium">Submitted {bid?.submittedAt ? new Date(bid.submittedAt).toLocaleDateString() : 'N/A'}</span>
                 <span className="px-2 py-0.5 rounded bg-[#138A4B]/10 text-[#138A4B] font-bold text-[10px]">
                   STATUS: {bid?.finalReviewStatus || bid?.status}
                 </span>

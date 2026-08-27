@@ -1,4 +1,4 @@
-// File: C:\Users\deepa\Desktop\Deepak\github\BidShield_AI\app\api\tenders\[id]\route.ts
+// File: E:\My_Projects\Github Files\Ongoing\BidShield_AI\app\api\tenders\[id]\route.ts
 import * as entry from '../../../../../../app/api/tenders/[id]/route.js'
 import type { NextRequest } from 'next/server.js'
 

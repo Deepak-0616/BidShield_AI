@@ -22,6 +22,9 @@ export async function GET(req: NextRequest, { params }: { params: { bidId: strin
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
+    // Helper to sanitize text for StandardFonts.Helvetica (WinAnsi)
+    const cleanText = (str: string) => (str || '').replace(/[^\x20-\x7E]/g, '-').trim();
+
     // Header bar
     page.drawRectangle({
       x: 0,
@@ -31,7 +34,7 @@ export async function GET(req: NextRequest, { params }: { params: { bidId: strin
       color: rgb(0.043, 0.227, 0.356), // #0B3A5B
     });
 
-    page.drawText('BIDSHIELD AI — COMPLIANCE & RISK ASSESSMENT REPORT', {
+    page.drawText('BIDSHIELD AI - COMPLIANCE & RISK ASSESSMENT REPORT', {
       x: 40,
       y: 755,
       size: 14,
@@ -49,12 +52,12 @@ export async function GET(req: NextRequest, { params }: { params: { bidId: strin
 
     // Content Body
     let y = 690;
-    page.drawText(`Tender Number: ${bid.tender.tenderNumber}`, { x: 40, y, size: 10, font: fontBold });
+    page.drawText(`Tender Number: ${cleanText(bid.tender.tenderNumber)}`, { x: 40, y, size: 10, font: fontBold });
     page.drawText(`Date Generated: ${new Date().toISOString().split('T')[0]}`, { x: 400, y, size: 10, font: fontRegular });
     y -= 18;
-    page.drawText(`Tender Title: ${bid.tender.title}`, { x: 40, y, size: 10, font: fontRegular });
+    page.drawText(`Tender Title: ${cleanText(bid.tender.title).substring(0, 75)}`, { x: 40, y, size: 10, font: fontRegular });
     y -= 18;
-    page.drawText(`Bidder Name: ${bid.bidderName}`, { x: 40, y, size: 11, font: fontBold, color: rgb(0.043, 0.227, 0.356) });
+    page.drawText(`Bidder Name: ${cleanText(bid.bidderName)}`, { x: 40, y, size: 11, font: fontBold, color: rgb(0.043, 0.227, 0.356) });
     y -= 25;
 
     // Summary Box
@@ -76,7 +79,7 @@ export async function GET(req: NextRequest, { params }: { params: { bidId: strin
       color: bid.complianceScore >= 80 ? rgb(0.07, 0.54, 0.29) : rgb(0.85, 0.5, 0.0),
     });
 
-    page.drawText(`RISK SCORE: ${bid.riskScore} / 100 (${bid.riskLevel} RISK)`, {
+    page.drawText(`RISK SCORE: ${bid.riskScore} / 100 (${cleanText(bid.riskLevel)} RISK)`, {
       x: 320,
       y: y - 20,
       size: 12,
@@ -84,7 +87,7 @@ export async function GET(req: NextRequest, { params }: { params: { bidId: strin
       color: bid.riskLevel === 'LOW' ? rgb(0.07, 0.54, 0.29) : bid.riskLevel === 'MEDIUM' ? rgb(0.85, 0.5, 0.0) : rgb(0.77, 0.15, 0.15),
     });
 
-    page.drawText(`Final Status: ${bid.finalReviewStatus}`, { x: 55, y: y - 40, size: 10, font: fontRegular });
+    page.drawText(`Final Status: ${cleanText(bid.finalReviewStatus)}`, { x: 55, y: y - 40, size: 10, font: fontRegular });
 
     y -= 80;
     page.drawText('REQUIREMENT EVALUATION MATRIX', { x: 40, y, size: 11, font: fontBold });
@@ -103,10 +106,10 @@ export async function GET(req: NextRequest, { params }: { params: { bidId: strin
     for (const cr of bid.complianceResults) {
       if (y < 120) break;
       const req = cr.requirement;
-      page.drawText(req.requirementCode, { x: 50, y, size: 9, font: fontBold });
-      page.drawText(req.title.substring(0, 32), { x: 110, y, size: 8.5, font: fontRegular });
-      page.drawText(req.category, { x: 300, y, size: 8.5, font: fontRegular });
-      page.drawText(cr.status, {
+      page.drawText(cleanText(req.requirementCode), { x: 50, y, size: 9, font: fontBold });
+      page.drawText(cleanText(req.title).substring(0, 32), { x: 110, y, size: 8.5, font: fontRegular });
+      page.drawText(cleanText(req.category), { x: 300, y, size: 8.5, font: fontRegular });
+      page.drawText(cleanText(cr.status), {
         x: 420,
         y,
         size: 8.5,
