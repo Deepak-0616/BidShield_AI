@@ -96,11 +96,17 @@ export default function LoginPage() {
 
       const data = await res.json();
       if (data.success) {
+        let redirectUrl = '/dashboard';
         if (data.user.role === 'BIDDER') {
-          router.push('/bidder/dashboard');
-        } else {
-          router.push('/dashboard');
+          redirectUrl = '/bidder/dashboard';
+        } else if (data.user.role === 'AUDITOR') {
+          redirectUrl = '/audit';
+        } else if (data.user.role === 'ADMIN' || data.user.role === 'PROCUREMENT_OFFICER') {
+          redirectUrl = '/dashboard';
         }
+        
+        // Full page redirect so auth token cookie and React session state are freshly initialized for the logged-in role
+        window.location.href = redirectUrl;
       } else {
         setError(data.error?.message || 'Login failed.');
       }
