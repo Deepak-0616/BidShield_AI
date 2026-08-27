@@ -63,3 +63,26 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ success: false, error: { message: error.message } }, { status: 500 });
   }
 }
+
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const { finalReviewStatus, reviewComments } = await req.json();
+
+    const updatedBid = await prisma.bid.update({
+      where: { id: params.id },
+      data: {
+        finalReviewStatus,
+        status: finalReviewStatus === 'APPROVED' ? 'COMPLETED' : finalReviewStatus === 'REJECTED' ? 'REJECTED' : 'UNDER_REVIEW',
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      bid: updatedBid,
+      message: `Bid status updated to ${finalReviewStatus}`,
+    });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: { message: error.message } }, { status: 500 });
+  }
+}
+

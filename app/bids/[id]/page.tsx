@@ -24,7 +24,11 @@ import {
   Eye,
 } from 'lucide-react';
 
+import RoleGuard from '@/components/auth/RoleGuard';
+import { useAuth } from '@/lib/auth-context';
+
 export default function BidDetailDemoPage() {
+  const { user } = useAuth();
   const params = useParams();
   const bidId = params?.id as string;
 
@@ -32,6 +36,7 @@ export default function BidDetailDemoPage() {
   const [categoryScores, setCategoryScores] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [recalculating, setRecalculating] = useState(false);
+  const [updatingDecision, setUpdatingDecision] = useState(false);
 
   // Chat State for Ask BidShield
   const [chatOpen, setChatOpen] = useState(true);
@@ -82,6 +87,26 @@ export default function BidDetailDemoPage() {
     }
   };
 
+  const handleUpdateDecision = async (status: string) => {
+    if (!bidId) return;
+    setUpdatingDecision(true);
+    try {
+      const res = await fetch(`/api/bids/${bidId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ finalReviewStatus: status }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchBid();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setUpdatingDecision(false);
+    }
+  };
+
   const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatQuery.trim()) return;
@@ -113,21 +138,25 @@ export default function BidDetailDemoPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center space-y-3">
-            <RefreshCw className="w-8 h-8 text-[#0B3A5B] animate-spin mx-auto" />
-            <p className="text-xs font-bold text-slate-600">Loading AI Compliance Evidence Engine...</p>
+      <RoleGuard allowedRoles={['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR']}>
+        <DashboardLayout>
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center space-y-3">
+              <RefreshCw className="w-8 h-8 text-[#0B3A5B] animate-spin mx-auto" />
+              <p className="text-xs font-bold text-slate-600">Loading AI Compliance Evidence Engine...</p>
+            </div>
           </div>
-        </div>
-      </DashboardLayout>
+        </DashboardLayout>
+      </RoleGuard>
     );
   }
 
   const isNovaTech = bid?.bidderName?.includes('NovaTech');
+  const isOfficerOrAdmin = user?.role === 'ADMIN' || user?.role === 'PROCUREMENT_OFFICER';
 
   return (
-    <DashboardLayout>
+    <RoleGuard allowedRoles={['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR']}>
+      <DashboardLayout>
       <div className="flex gap-6 max-w-7xl mx-auto items-start">
         {/* Main Left Evaluation View */}
         <div className="flex-1 space-y-6 min-w-0">
@@ -139,6 +168,9 @@ export default function BidDetailDemoPage() {
                   {bid?.tender?.tenderNumber}
                 </span>
                 <span className="text-xs text-slate-500 font-medium">Submitted {new Date(bid?.submittedAt).toLocaleDateString()}</span>
+                <span className="px-2 py-0.5 rounded bg-[#138A4B]/10 text-[#138A4B] font-bold text-[10px]">
+                  STATUS: {bid?.finalReviewStatus || bid?.status}
+                </span>
               </div>
               <h1 className="text-2xl font-black text-[#0B3A5B] tracking-tight">{bid?.bidderName}</h1>
               <p className="text-xs text-slate-500 font-medium">{bid?.tender?.title}</p>
@@ -187,14 +219,16 @@ export default function BidDetailDemoPage() {
 
               {/* Actions */}
               <div className="flex flex-col gap-2">
-                <button
-                  onClick={handleRunCompliance}
-                  disabled={recalculating}
-                  className="px-3.5 py-2 bg-[#0B3A5B] text-white text-xs font-bold rounded-lg shadow hover:bg-[#082C46] transition flex items-center gap-1.5"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${recalculating ? 'animate-spin' : ''}`} />
-                  <span>Re-Run AI Verification</span>
-                </button>
+                {isOfficerOrAdmin && (
+                  <button
+                    onClick={handleRunCompliance}
+                    disabled={recalculating}
+                    className="px-3.5 py-2 bg-[#0B3A5B] text-white text-xs font-bold rounded-lg shadow hover:bg-[#082C46] transition flex items-center gap-1.5"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${recalculating ? 'animate-spin' : ''}`} />
+                    <span>Re-Run AI Verification</span>
+                  </button>
+                )}
 
                 <a
                   href={`/api/reports/compliance/${bid?.id}`}
@@ -208,6 +242,42 @@ export default function BidDetailDemoPage() {
               </div>
             </div>
           </div>
+
+          {/* Officer Final Decision Actions Bar */}
+          {isOfficerOrAdmin && (
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <h3 className="text-xs font-bold text-[#0B3A5B] uppercase tracking-wider">Procurement Officer Final Decision</h3>
+                <p className="text-[11px] text-slate-500">Record final evaluation judgment based on AI evidence support</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleUpdateDecision('APPROVED')}
+                  disabled={updatingDecision}
+                  className="px-4 py-2 bg-[#138A4B] text-white text-xs font-bold rounded-lg hover:bg-[#0f6f3c] transition shadow flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Approve Bid</span>
+                </button>
+                <button
+                  onClick={() => handleUpdateDecision('REJECTED')}
+                  disabled={updatingDecision}
+                  className="px-4 py-2 bg-[#C62828] text-white text-xs font-bold rounded-lg hover:bg-[#9a1f1f] transition shadow flex items-center gap-1.5"
+                >
+                  <XCircle className="w-4 h-4" />
+                  <span>Reject Bid</span>
+                </button>
+                <button
+                  onClick={() => handleUpdateDecision('CLARIFICATION_REQUESTED')}
+                  disabled={updatingDecision}
+                  className="px-4 py-2 bg-[#D98200] text-white text-xs font-bold rounded-lg hover:bg-[#ad6800] transition shadow flex items-center gap-1.5"
+                >
+                  <AlertCircle className="w-4 h-4" />
+                  <span>Request Clarification</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Contradiction / Inconsistency Warning Alert */}
           {isNovaTech && (
@@ -446,5 +516,7 @@ export default function BidDetailDemoPage() {
         </div>
       )}
     </DashboardLayout>
+    </RoleGuard>
   );
 }
+

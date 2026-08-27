@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 import {
   LayoutDashboard,
   FileText,
@@ -12,7 +13,6 @@ import {
   Link2,
   Scale,
   Bot,
-  BarChart3,
   FileCheck2,
   History,
   Settings,
@@ -24,25 +24,25 @@ interface SidebarProps {
   userRole?: string;
 }
 
-export default function Sidebar({ userRole = 'PROCUREMENT_OFFICER' }: SidebarProps) {
+export default function Sidebar({ userRole }: SidebarProps) {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
+
+  const activeRole = user?.role || userRole || 'PROCUREMENT_OFFICER';
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
     { name: 'Tenders', href: '/tenders', icon: FileText, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'BIDDER', 'AUDITOR'] },
-    { name: 'Bids', href: '/bids', icon: FileCheck, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
-    { name: 'Compliance', href: '/bids', icon: ShieldCheck, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
-    { name: 'Risk Intelligence', href: '/bids', icon: AlertTriangle, roles: ['ADMIN', 'PROCUREMENT_OFFICER'] },
+    { name: 'Bids & Evaluation', href: '/bids', icon: FileCheck, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
     { name: 'Verification Center', href: '/verification', icon: Link2, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
     { name: 'Bid Comparison', href: '/compare', icon: Scale, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
-    { name: 'Ask BidShield', href: '/bids', icon: Bot, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
     { name: 'Reports', href: '/reports', icon: FileCheck2, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
     { name: 'Audit Trail', href: '/audit', icon: History, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
     { name: 'Bidder Portal', href: '/bidder/dashboard', icon: FileText, roles: ['BIDDER'] },
     { name: 'Admin Panel', href: '/admin/users', icon: Settings, roles: ['ADMIN'] },
   ];
 
-  const filteredNav = navItems.filter((item) => item.roles.includes(userRole));
+  const filteredNav = navItems.filter((item) => item.roles.includes(activeRole));
 
   return (
     <aside className="w-64 bg-[#0B3A5B] text-white min-h-screen flex flex-col shadow-xl z-20">
@@ -85,18 +85,19 @@ export default function Sidebar({ userRole = 'PROCUREMENT_OFFICER' }: SidebarPro
       <div className="p-4 border-t border-[#1261A0] bg-[#082C46]/60">
         <div className="flex items-center justify-between">
           <div className="truncate">
-            <p className="text-xs font-bold text-white truncate">{userRole.replace('_', ' ')}</p>
-            <p className="text-[10px] text-slate-400">Authenticated Session</p>
+            <p className="text-xs font-bold text-white truncate">{activeRole.replace('_', ' ')}</p>
+            <p className="text-[10px] text-slate-400">{user?.email || 'Authenticated Session'}</p>
           </div>
-          <Link
-            href="/login"
-            className="p-1.5 text-slate-300 hover:text-white hover:bg-white/10 rounded-md transition"
-            title="Logout"
+          <button
+            onClick={logout}
+            className="p-1.5 text-slate-300 hover:text-[#C62828] hover:bg-white/10 rounded-md transition"
+            title="Sign Out"
           >
             <LogOut className="w-4 h-4" />
-          </Link>
+          </button>
         </div>
       </div>
     </aside>
   );
 }
+
