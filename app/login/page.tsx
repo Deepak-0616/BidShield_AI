@@ -1,15 +1,29 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 import { Shield, Lock, Mail, ArrowRight, CheckCircle2, UserCheck, ShieldAlert, FileText, AlertCircle } from 'lucide-react';
+
 
 export default function LoginPage() {
   const router = useRouter();
+  const { user, refetchSession } = useAuth();
+
   const [email, setEmail] = useState('officer@bidshield.demo');
   const [password, setPassword] = useState('Officer@123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'BIDDER') {
+        router.replace('/bidder/dashboard');
+      } else {
+        router.replace('/dashboard');
+      }
+    }
+  }, [user, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +39,7 @@ export default function LoginPage() {
 
       const data = await res.json();
       if (data.success) {
+        await refetchSession();
         if (data.user.role === 'BIDDER') {
           router.push('/bidder/dashboard');
         } else {
