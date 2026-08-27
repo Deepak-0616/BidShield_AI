@@ -1,0 +1,38 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 539 >>
+stream
+BT /F1 16 Tf 50 750 Td (LOCAL CONTENT DECLARATION UNDER MAKE IN INDIA) Tj ET
+BT /F1 10 Tf 50 710 Td (Declaration Reference: NT/MII/2026/089) Tj ET
+BT /F1 10 Tf 50 692 Td (Bidder Name: NovaTech Systems Private Limited) Tj ET
+BT /F1 10 Tf 50 674 Td (Tender Reference: GEM-DEMO-2026-IT-001) Tj ET
+BT /F1 10 Tf 50 656 Td (Declared Local Content Percentage: 42.0%) Tj ET
+BT /F1 10 Tf 50 638 Td (Classification: Class-II Local Supplier \(Below 50% Threshold\)) Tj ET
+BT /F1 10 Tf 50 620 Td (Required Threshold: 50.0% Minimum Local Content) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000244 00000 n 
+0000000295 + len(stream_content) 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+400
+%%EOF

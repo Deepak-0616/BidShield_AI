@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:./dev.db
+      - JWT_SECRET=bidshield-super-secret-jwt-key-2026-sih26100
+      - AI_SERVICE_URL=http://ai-service:8000
+      - DEMO_MODE=true
+    depends_on:
+      - ai-service
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DEMO_MODE=true
+      - AI_PROVIDER=demo
+
+volumes:
+  sqlite_data:
