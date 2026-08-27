@@ -3,6 +3,7 @@
 import React from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { useAuth } from '@/lib/auth-context';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -13,17 +14,24 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({
   children,
-  userRole = 'PROCUREMENT_OFFICER',
-  userName = 'Dr. Ananya Sharma',
-  department = 'Ministry of Petroleum & Natural Gas',
+  userRole,
+  userName,
+  department,
 }: DashboardLayoutProps) {
+  const { user } = useAuth();
+
+  const role = user?.role || userRole;
+  const name = user?.name || userName;
+  const dept = user?.department || department;
+
   return (
     <div className="flex min-h-screen bg-[#F5F7FA]">
-      <Sidebar userRole={userRole} />
+      <Sidebar userRole={role} />
       <div className="flex-1 flex flex-col min-w-0">
-        <Header userName={userName} userRole={userRole} department={department} />
+        <Header userName={name} userRole={role} department={dept} />
         <main className="flex-1 p-6 overflow-y-auto">{children}</main>
       </div>
     </div>
   );
 }
+
