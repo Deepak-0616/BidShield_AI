@@ -28,6 +28,8 @@ function BidsListingContent() {
   const [riskFilter, setRiskFilter] = useState('ALL');
   const [tenderFilter, setTenderFilter] = useState(paramTenderId);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
+  const [newlyUpdatedBidIds, setNewlyUpdatedBidIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetch('/api/tenders?all=true')
@@ -46,14 +48,14 @@ function BidsListingContent() {
     }
   }, [paramTenderId]);
 
-  const fetchBids = () => {
-    setLoading(true);
+  const fetchBids = (silent = false) => {
+    if (!silent) setLoading(true);
     let url = `/api/bids?riskLevel=${riskFilter}`;
     if (tenderFilter && tenderFilter !== 'ALL') {
       url += `&tenderId=${tenderFilter}`;
     }
 
-    fetch(url)
+    fetch(url, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -61,11 +63,46 @@ function BidsListingContent() {
         }
       })
       .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
   };
 
   useEffect(() => {
     fetchBids();
+  }, [riskFilter, tenderFilter]);
+
+  // Setup Real-time SSE listener
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/realtime');
+      eventSource.onopen = () => setIsLiveConnected(true);
+      eventSource.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          if (
+            event.type === 'BID_CREATED' ||
+            event.type === 'BID_UPDATED' ||
+            event.type === 'COMPLIANCE_EVALUATED' ||
+            event.type === 'DOCUMENT_UPLOADED'
+          ) {
+            fetchBids(true);
+            if (event.data?.bidId) {
+              setNewlyUpdatedBidIds((prev) => new Set(prev).add(event.data.bidId));
+            }
+          }
+        } catch {}
+      };
+      eventSource.onerror = () => setIsLiveConnected(false);
+    } catch {}
+
+    const pollInterval = setInterval(() => fetchBids(true), 4000);
+
+    return () => {
+      if (eventSource) eventSource.close();
+      clearInterval(pollInterval);
+    };
   }, [riskFilter, tenderFilter]);
 
   const handleTenderFilterChange = (tid: string) => {
@@ -96,16 +133,35 @@ function BidsListingContent() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
             <div>
-              <h1 className="text-2xl font-black text-[#0B3A5B] tracking-tight">Bidder Submissions & Evaluations</h1>
-              <p className="text-xs text-slate-500 mt-1">GeM tender bids, document verifications & deterministic rule analysis</p>
+              <div className="flex items-center gap-2.5 mb-1">
+                <h1 className="text-2xl font-black text-[#0B3A5B] tracking-tight">Bidder Submissions & Evaluations</h1>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-[#138A4B] border border-emerald-200 shadow-sm">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span>LIVE UPDATING</span>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">GeM tender bids, document verifications & deterministic rule analysis</p>
             </div>
-            <Link
-              href="/compare"
-              className="px-4 py-2.5 bg-[#0B3A5B] text-white text-xs font-bold rounded-lg shadow hover:bg-[#082C46] transition flex items-center gap-2"
-            >
-              <ShieldCheck className="w-4 h-4 text-[#F4B400]" />
-              <span>Side-by-Side Bid Comparison</span>
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => fetchBids(false)}
+                title="Refresh bids"
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 transition flex items-center gap-1.5 shadow-sm"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Refresh</span>
+              </button>
+              <Link
+                href="/compare"
+                className="px-4 py-2 bg-[#0B3A5B] text-white text-xs font-bold rounded-lg shadow hover:bg-[#082C46] transition flex items-center gap-2"
+              >
+                <ShieldCheck className="w-4 h-4 text-[#F4B400]" />
+                <span>Open Bid Comparison</span>
+              </Link>
+            </div>
           </div>
 
           {/* Active Tender Scope Banner */}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { createAuditLog } from '@/lib/audit';
+import { broadcastRealtimeEvent } from '@/lib/events';
 
 export async function GET(req: NextRequest) {
   try {
@@ -146,6 +147,13 @@ export async function POST(req: NextRequest) {
       entityType: 'TENDER',
       entityId: tender.id,
       metadata: { tenderNumber: tender.tenderNumber, title: tender.title, requirementsCount: reqList.length },
+    });
+
+    broadcastRealtimeEvent('TENDER_CREATED', {
+      tenderId: tender.id,
+      tenderNumber: tender.tenderNumber,
+      title: tender.title,
+      category: tender.category,
     });
 
     return NextResponse.json({ success: true, tender });

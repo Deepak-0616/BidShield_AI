@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
+import { broadcastRealtimeEvent } from '@/lib/events';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -40,6 +41,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         ruleType: ruleType || 'MATCH_EXACT',
         confidence: 1.0,
       },
+    });
+
+    broadcastRealtimeEvent('TENDER_CREATED', {
+      tenderId: params.id,
+      requirementId: requirement.id,
     });
 
     return NextResponse.json({ success: true, requirement });

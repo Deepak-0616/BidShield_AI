@@ -7,12 +7,12 @@ import { Link2, CheckCircle2, ShieldCheck, RefreshCw, Send, AlertCircle } from '
 
 export default function VerificationCenterPage() {
   const [provider, setProvider] = useState('GST');
-  const [inputValue, setInputValue] = useState('27AAACN1234Q1Z5');
+  const [inputValue, setInputValue] = useState('24ABKCS2033B1ZV');
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   const adapters = [
-    { name: 'GSTIN Validator (ISO 7064)', code: 'GST', status: 'ACTIVE — ₹0 ALGORITHMIC', badge: 'VALIDATOR', color: '#138A4B' },
+    { name: 'GSTIN (Sandbox Live API & ISO 7064)', code: 'GST', status: 'CONNECTED — LIVE SANDBOX API', badge: 'LIVE / STATUTORY', color: '#138A4B' },
     { name: 'Income Tax PAN Validator', code: 'PAN', status: 'ACTIVE — ₹0 ALGORITHMIC', badge: 'VALIDATOR', color: '#138A4B' },
     { name: 'MSME Udyam Validator', code: 'UDYAM', status: 'ACTIVE — ₹0 ALGORITHMIC', badge: 'VALIDATOR', color: '#138A4B' },
     { name: 'MCA Corporate Registry (data.gov.in)', code: 'MCA', status: 'CONNECTED — DATA.GOV.IN API', badge: 'LIVE / DEMO', color: '#138A4B' },
@@ -22,8 +22,8 @@ export default function VerificationCenterPage() {
 
   const handleProviderChange = (newProvider: string) => {
     setProvider(newProvider);
-    if (newProvider === 'GST') setInputValue('27AAACN1234Q1Z5');
-    else if (newProvider === 'PAN') setInputValue('AAACN1234Q');
+    if (newProvider === 'GST') setInputValue('24ABKCS2033B1ZV');
+    else if (newProvider === 'PAN') setInputValue('ABKCS2033B');
     else if (newProvider === 'UDYAM') setInputValue('UDYAM-MH-03-0012345');
     else if (newProvider === 'MCA') setInputValue('ABD-0345');
     else if (newProvider === 'OEM') setInputValue('OEM/APEX/2026/9941');
@@ -45,7 +45,6 @@ export default function VerificationCenterPage() {
           mcaCin: inputValue,
           cin: inputValue,
           referenceNumber: inputValue,
-          legalName: 'NovaTech Systems Private Limited',
         }),
       });
       const data = await res.json();

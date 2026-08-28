@@ -16,15 +16,50 @@ export default function TendersPage() {
 
   const canCreateTender = user?.role === 'ADMIN' || user?.role === 'PROCUREMENT_OFFICER';
 
-  useEffect(() => {
-    fetch(`/api/tenders?search=${search}&status=${statusFilter}`)
+  const fetchTenders = (silent = false) => {
+    if (!silent) setLoading(true);
+    fetch(`/api/tenders?search=${search}&status=${statusFilter}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setTenders(data.tenders);
+          setTenders(data.tenders || []);
         }
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchTenders();
+  }, [search, statusFilter]);
+
+  // Real-time SSE Stream listener
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/realtime');
+      eventSource.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          if (
+            event.type === 'TENDER_CREATED' ||
+            event.type === 'TENDER_UPDATED' ||
+            event.type === 'BID_CREATED' ||
+            event.type === 'BID_UPDATED'
+          ) {
+            fetchTenders(true);
+          }
+        } catch {}
+      };
+    } catch {}
+
+    const poll = setInterval(() => fetchTenders(true), 4000);
+
+    return () => {
+      if (eventSource) eventSource.close();
+      clearInterval(poll);
+    };
   }, [search, statusFilter]);
 
   return (
