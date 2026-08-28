@@ -11,6 +11,16 @@ export interface UserSession {
   department?: string;
   designation?: string;
   avatar?: string;
+  gstin?: string | null;
+  pan?: string | null;
+  companyName?: string | null;
+  legalName?: string | null;
+  tradeName?: string | null;
+  gstStatus?: string | null;
+  constitution?: string | null;
+  registrationDate?: string | null;
+  gstVerifiedAt?: string | Date | null;
+  address?: string | null;
 }
 
 interface AuthContextType {

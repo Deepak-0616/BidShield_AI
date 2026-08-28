@@ -8,11 +8,12 @@ import { Upload, FileText, CheckCircle2, ArrowRight, Loader2, Sparkles, Shield }
 
 export default function CreateTenderPage() {
   const router = useRouter();
-  const [title, setTitle] = useState('Enterprise Cloud & IT Infrastructure Modernization');
-  const [tenderNumber, setTenderNumber] = useState('GEM-DEMO-2026-IT-002');
-  const [estimatedValue, setEstimatedValue] = useState('250000000');
+  const [title, setTitle] = useState('');
+  const [tenderNumber, setTenderNumber] = useState('');
+  const [estimatedValue, setEstimatedValue] = useState('');
   const [category, setCategory] = useState('Software & IT Infrastructure');
-  const [description, setDescription] = useState('Comprehensive cloud compute, database clusters and managed security for GeM procurement.');
+  const [description, setDescription] = useState('');
+  const [submissionDeadline, setSubmissionDeadline] = useState('');
 
   const [step, setStep] = useState(1); // 1 = Form, 2 = AI Extraction Pipeline, 3 = Complete
   const [pipelineProgress, setPipelineProgress] = useState<string[]>([]);
@@ -90,6 +91,7 @@ export default function CreateTenderPage() {
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Tender Title</label>
                   <input
                     type="text"
+                    placeholder="e.g. Turnkey EPC for 100MW Floating Solar Power Plant"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     required
@@ -101,9 +103,9 @@ export default function CreateTenderPage() {
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Tender Number</label>
                   <input
                     type="text"
+                    placeholder="e.g. GEM-2026-SOLAR-009 (or auto-generated)"
                     value={tenderNumber}
                     onChange={(e) => setTenderNumber(e.target.value)}
-                    required
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:bg-white focus:ring-1 focus:ring-[#0B3A5B] outline-none"
                   />
                 </div>
@@ -112,6 +114,7 @@ export default function CreateTenderPage() {
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Estimated Value (INR)</label>
                   <input
                     type="number"
+                    placeholder="e.g. 50000000"
                     value={estimatedValue}
                     onChange={(e) => setEstimatedValue(e.target.value)}
                     required
@@ -123,6 +126,7 @@ export default function CreateTenderPage() {
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Category</label>
                   <input
                     type="text"
+                    placeholder="e.g. Solar Power / IT / Medical"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     required

@@ -28,7 +28,7 @@ export default function TenderRequirementsPage() {
   }, [tenderId]);
 
   return (
-    <RoleGuard allowedRoles={['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR']}>
+    <RoleGuard allowedRoles={['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR', 'BIDDER']}>
       <DashboardLayout>
         <div className="space-y-6 max-w-7xl mx-auto">
           {/* Header */}
@@ -36,16 +36,23 @@ export default function TenderRequirementsPage() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="px-2 py-0.5 rounded bg-blue-100 text-[#0B3A5B] font-bold text-[10px]">
-                  {tender?.tenderNumber || 'GEM-DEMO-2026-IT-001'}
+                  {tender?.tenderNumber || 'TENDER'}
                 </span>
-                <span className="text-xs text-slate-500 font-medium">8 AI-Extracted Rules</span>
+                <span className="text-xs text-slate-500 font-medium">{requirements.length} AI-Extracted Rules</span>
               </div>
               <h1 className="text-2xl font-black text-[#0B3A5B] tracking-tight">{tender?.title || 'Tender Requirements'}</h1>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold px-3 py-1 rounded bg-[#138A4B]/10 text-[#138A4B] border border-[#138A4B]/20 flex items-center gap-1.5">
+              <span className="text-xs font-semibold px-3 py-1.5 rounded bg-[#138A4B]/10 text-[#138A4B] border border-[#138A4B]/20 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" /> AI Extractor Verified
               </span>
+              <a
+                href={`/bidder/dashboard?tenderId=${tenderId}`}
+                className="px-4 py-2 bg-[#0B3A5B] text-white text-xs font-bold rounded-lg shadow hover:bg-[#082C46] transition flex items-center gap-1.5"
+              >
+                <FileText className="w-4 h-4 text-[#F4B400]" />
+                <span>Apply / Upload in Bidder Portal</span>
+              </a>
             </div>
           </div>
 

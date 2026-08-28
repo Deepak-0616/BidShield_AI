@@ -12,13 +12,22 @@ export default function VerificationCenterPage() {
   const [loading, setLoading] = useState(false);
 
   const adapters = [
-    { name: 'GST Portal API', code: 'GST', status: 'CONNECTED — DEMO', badge: 'DEMO', color: '#138A4B' },
-    { name: 'Income Tax PAN Service', code: 'PAN', status: 'CONNECTED — DEMO', badge: 'DEMO', color: '#138A4B' },
-    { name: 'MSME Udyam Portal', code: 'UDYAM', status: 'CONNECTED — DEMO', badge: 'DEMO', color: '#138A4B' },
-    { name: 'MCA Corporate Registry', code: 'MCA', status: 'SIMULATED ADAPTER', badge: 'SIMULATED', color: '#D98200' },
+    { name: 'GSTIN Validator (ISO 7064)', code: 'GST', status: 'ACTIVE — ₹0 ALGORITHMIC', badge: 'VALIDATOR', color: '#138A4B' },
+    { name: 'Income Tax PAN Validator', code: 'PAN', status: 'ACTIVE — ₹0 ALGORITHMIC', badge: 'VALIDATOR', color: '#138A4B' },
+    { name: 'MSME Udyam Validator', code: 'UDYAM', status: 'ACTIVE — ₹0 ALGORITHMIC', badge: 'VALIDATOR', color: '#138A4B' },
+    { name: 'MCA Corporate Registry (data.gov.in)', code: 'MCA', status: 'CONNECTED — DATA.GOV.IN API', badge: 'LIVE / DEMO', color: '#138A4B' },
     { name: 'OEM Partner Database', code: 'OEM', status: 'SIMULATED ADAPTER', badge: 'SIMULATED', color: '#D98200' },
     { name: 'DigiLocker Verification', code: 'DIGILOCKER', status: 'SIMULATED ADAPTER', badge: 'SIMULATED', color: '#D98200' },
   ];
+
+  const handleProviderChange = (newProvider: string) => {
+    setProvider(newProvider);
+    if (newProvider === 'GST') setInputValue('27AAACN1234Q1Z5');
+    else if (newProvider === 'PAN') setInputValue('AAACN1234Q');
+    else if (newProvider === 'UDYAM') setInputValue('UDYAM-MH-03-0012345');
+    else if (newProvider === 'MCA') setInputValue('ABD-0345');
+    else if (newProvider === 'OEM') setInputValue('OEM/APEX/2026/9941');
+  };
 
   const handleRunVerification = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +38,15 @@ export default function VerificationCenterPage() {
       const res = await fetch(`/api/verification/${provider.toLowerCase()}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gstin: inputValue, pan: inputValue, legalName: 'NovaTech Systems Private Limited' }),
+        body: JSON.stringify({
+          gstin: inputValue,
+          pan: inputValue,
+          udyamNo: inputValue,
+          mcaCin: inputValue,
+          cin: inputValue,
+          referenceNumber: inputValue,
+          legalName: 'NovaTech Systems Private Limited',
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -43,7 +60,7 @@ export default function VerificationCenterPage() {
   };
 
   return (
-    <RoleGuard allowedRoles={['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR']}>
+    <RoleGuard allowedRoles={['ADMIN', 'AUDITOR']}>
       <DashboardLayout>
         <div className="space-y-6 max-w-7xl mx-auto">
           <div className="border-b border-slate-200 pb-4">
@@ -89,7 +106,7 @@ export default function VerificationCenterPage() {
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Select Adapter</label>
                 <select
                   value={provider}
-                  onChange={(e) => setProvider(e.target.value)}
+                  onChange={(e) => handleProviderChange(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800"
                 >
                   <option value="GST">GST Verification (GSTIN)</option>
@@ -122,9 +139,35 @@ export default function VerificationCenterPage() {
             </form>
 
             {response && (
-              <div className="bg-slate-900 text-green-400 p-4 rounded-xl text-xs font-mono overflow-x-auto shadow-inner">
-                <span className="text-slate-400 block mb-2">// Response payload returned by {response.provider}:</span>
-                <pre>{JSON.stringify(response, null, 2)}</pre>
+              <div className="space-y-3">
+                {response.corporateStatusRisk ? (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                      <div>
+                        <span className="font-bold text-red-900">FLAG: CORPORATE_STATUS_RISK</span>
+                        <span className="ml-2 text-[11px] text-red-700">({response.statusDescription || `Entity status is ${response.status}`})</span>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-red-200 text-red-900 font-bold text-[10px] uppercase">Corporate Status Risk</span>
+                  </div>
+                ) : response.status === 'ACTIVE' || response.status === 'VALID' || response.status === 'VERIFIED' ? (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-800 text-xs flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                      <div>
+                        <span className="font-bold text-green-900">STATUS: {response.status} (NORMAL)</span>
+                        <span className="ml-2 text-[11px] text-green-700">({response.statusDescription || 'Standing verified with registry.'})</span>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-green-200 text-green-900 font-bold text-[10px] uppercase">Normal Standing</span>
+                  </div>
+                ) : null}
+
+                <div className="bg-slate-900 text-green-400 p-4 rounded-xl text-xs font-mono overflow-x-auto shadow-inner">
+                  <span className="text-slate-400 block mb-2">// Response payload returned by {response.provider}:</span>
+                  <pre>{JSON.stringify(response, null, 2)}</pre>
+                </div>
               </div>
             )}
           </div>

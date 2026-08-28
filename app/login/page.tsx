@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
-import { Shield, Lock, Mail, ArrowRight, CheckCircle2, UserCheck, ShieldAlert, FileText, AlertCircle } from 'lucide-react';
+import { Shield, Lock, Mail, ArrowRight, CheckCircle2, UserCheck, ShieldAlert, FileText, AlertCircle, Building2 } from 'lucide-react';
 
 
 export default function LoginPage() {
@@ -137,62 +138,55 @@ export default function LoginPage() {
             </button>
 
             {/* DEMO ACCOUNTS QUICK LOGIN SELECTOR */}
+            {/* DEDICATED ROLE PORTAL SELECTOR CARDS */}
             <div className="pt-4 border-t border-slate-200">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2 text-center">
-                Quick Demo Role Switcher
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2.5 text-center">
+                Select Dedicated Role Portal
               </span>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setDemoAccount('officer@bidshield.demo', 'Officer@123')}
-                  className={`p-2 rounded border text-left flex items-center gap-2 transition ${
-                    email === 'officer@bidshield.demo'
-                      ? 'border-[#0B3A5B] bg-[#0B3A5B]/10 font-bold text-[#0B3A5B]'
-                      : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
-                  }`}
+                <Link
+                  href="/login/bidder"
+                  className="p-2.5 rounded-lg bg-[#E57373] text-white flex items-center justify-between font-bold hover:brightness-95 transition shadow-sm"
                 >
-                  <UserCheck className="w-3.5 h-3.5 text-[#1261A0]" />
-                  <span>Officer</span>
-                </button>
+                  <span className="flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span>Bidder Portal</span>
+                  </span>
+                  <span className="text-[10px] bg-white/25 px-1.5 py-0.5 rounded">Register</span>
+                </Link>
 
-                <button
-                  type="button"
-                  onClick={() => setDemoAccount('bidder@novatech.demo', 'Bidder@123')}
-                  className={`p-2 rounded border text-left flex items-center gap-2 transition ${
-                    email === 'bidder@novatech.demo'
-                      ? 'border-[#0B3A5B] bg-[#0B3A5B]/10 font-bold text-[#0B3A5B]'
-                      : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
-                  }`}
+                <Link
+                  href="/login/officer"
+                  className="p-2.5 rounded-lg bg-[#BA68C8] text-white flex items-center justify-between font-bold hover:brightness-95 transition shadow-sm"
                 >
-                  <FileText className="w-3.5 h-3.5 text-[#138A4B]" />
-                  <span>Bidder</span>
-                </button>
+                  <span className="flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>Officer Portal</span>
+                  </span>
+                  <span className="text-[10px] bg-white/25 px-1.5 py-0.5 rounded">Govt</span>
+                </Link>
 
-                <button
-                  type="button"
-                  onClick={() => setDemoAccount('admin@bidshield.demo', 'Admin@123')}
-                  className={`p-2 rounded border text-left flex items-center gap-2 transition ${
-                    email === 'admin@bidshield.demo'
-                      ? 'border-[#0B3A5B] bg-[#0B3A5B]/10 font-bold text-[#0B3A5B]'
-                      : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
-                  }`}
+                <Link
+                  href="/login/admin"
+                  className="p-2.5 rounded-lg bg-[#7986CB] text-white flex items-center justify-between font-bold hover:brightness-95 transition shadow-sm"
                 >
-                  <ShieldAlert className="w-3.5 h-3.5 text-[#D98200]" />
-                  <span>Admin</span>
-                </button>
+                  <span className="flex items-center gap-1.5">
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    <span>Admin Portal</span>
+                  </span>
+                  <span className="text-[10px] bg-white/25 px-1.5 py-0.5 rounded">Gov</span>
+                </Link>
 
-                <button
-                  type="button"
-                  onClick={() => setDemoAccount('auditor@bidshield.demo', 'Auditor@123')}
-                  className={`p-2 rounded border text-left flex items-center gap-2 transition ${
-                    email === 'auditor@bidshield.demo'
-                      ? 'border-[#0B3A5B] bg-[#0B3A5B]/10 font-bold text-[#0B3A5B]'
-                      : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
-                  }`}
+                <Link
+                  href="/login/auditor"
+                  className="p-2.5 rounded-lg bg-[#4DD0E1] text-white flex items-center justify-between font-bold hover:brightness-95 transition shadow-sm"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#C62828]" />
-                  <span>Auditor</span>
-                </button>
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Auditor Portal</span>
+                  </span>
+                  <span className="text-[10px] bg-white/25 px-1.5 py-0.5 rounded">Audit</span>
+                </Link>
               </div>
             </div>
           </form>

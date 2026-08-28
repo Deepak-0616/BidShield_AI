@@ -19,7 +19,7 @@ export default function ReportsPage() {
   }, []);
 
   return (
-    <RoleGuard allowedRoles={['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR']}>
+    <RoleGuard allowedRoles={['ADMIN', 'AUDITOR']}>
       <DashboardLayout>
         <div className="space-y-6 max-w-7xl mx-auto">
           <div className="border-b border-slate-200 pb-4">

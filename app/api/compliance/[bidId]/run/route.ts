@@ -132,13 +132,14 @@ export async function POST(req: NextRequest, { params }: { params: { bidId: stri
     }
 
     // Risk Calculation
+    const contradictionCount = (missingCount > 0 && nonCompliantCount > 0) ? 1 : 0;
     const riskResult = calculateBidRisk({
       totalRequirements: requirements.length,
       mandatoryRequirementsCount: mandatoryCount,
       missingMandatoryCount: missingCount,
       nonCompliantCount: nonCompliantCount,
       partialCount: partialCount,
-      contradictionCount: bid.bidderName.includes('NovaTech') ? 1 : 0,
+      contradictionCount,
       unverifiedEvidenceCount: 0,
       averageConfidence: 0.95,
       lowQualityDocumentsCount: 0,

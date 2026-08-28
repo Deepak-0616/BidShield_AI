@@ -33,11 +33,11 @@ export default function Sidebar({ userRole }: SidebarProps) {
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
     { name: 'Tenders', href: '/tenders', icon: FileText, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'BIDDER', 'AUDITOR'] },
-    { name: 'Bids & Evaluation', href: '/bids', icon: FileCheck, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
-    { name: 'Verification Center', href: '/verification', icon: Link2, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
-    { name: 'Bid Comparison', href: '/compare', icon: Scale, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
-    { name: 'Reports', href: '/reports', icon: FileCheck2, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
-    { name: 'Audit Trail', href: '/audit', icon: History, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
+    { name: 'Bids & Submissions', href: '/bids', icon: FileCheck, roles: ['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR'] },
+    { name: 'Audit & Oversight', href: '/audit', icon: History, roles: ['ADMIN', 'AUDITOR'] },
+    { name: 'Verification Center', href: '/verification', icon: Link2, roles: ['ADMIN', 'AUDITOR'] },
+    { name: 'Bid Comparison', href: '/compare', icon: Scale, roles: ['ADMIN', 'AUDITOR'] },
+    { name: 'Reports', href: '/reports', icon: FileCheck2, roles: ['ADMIN', 'AUDITOR'] },
     { name: 'Bidder Portal', href: '/bidder/dashboard', icon: FileText, roles: ['BIDDER'] },
     { name: 'Admin Panel', href: '/admin/users', icon: Settings, roles: ['ADMIN'] },
   ];

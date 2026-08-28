@@ -5,7 +5,7 @@ import Link from 'next/link';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import RoleGuard from '@/components/auth/RoleGuard';
 import { useAuth } from '@/lib/auth-context';
-import { FileText, Plus, Search, Filter, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { FileText, FileCheck, Plus, Search, Filter, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 export default function TendersPage() {
   const { user } = useAuth();
@@ -42,8 +42,8 @@ export default function TendersPage() {
                 href="/tenders/new"
                 className="px-4 py-2.5 bg-[#0B3A5B] text-white text-xs font-bold rounded-lg shadow hover:bg-[#082C46] transition flex items-center gap-2"
               >
-                <Plus className="w-4 h-4" />
-                <span>Create Tender PDF</span>
+                <Plus className="w-4 h-4 text-[#F4B400]" />
+                <span>Open a Tender</span>
               </Link>
             )}
           </div>
@@ -69,10 +69,9 @@ export default function TendersPage() {
                 className="py-2 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none font-semibold text-slate-700"
               >
                 <option value="ALL">All Statuses</option>
-                <option value="OPEN">OPEN</option>
-                <option value="UNDER_REVIEW">UNDER_REVIEW</option>
-                <option value="ANALYZING">ANALYZING</option>
-                <option value="COMPLETED">COMPLETED</option>
+                <option value="OPEN">Open</option>
+                <option value="UNDER_REVIEW">Under Review</option>
+                <option value="CLOSED">Closed</option>
               </select>
             </div>
           </div>
@@ -101,9 +100,12 @@ export default function TendersPage() {
                     </td>
                     <td className="p-4 font-semibold text-slate-700">₹{(tender.estimatedValue / 10000000).toFixed(2)} Cr</td>
                     <td className="p-4">
-                      <span className="px-2 py-0.5 rounded bg-blue-50 text-[#1261A0] font-bold">
+                      <Link
+                        href={`/bids?tenderId=${tender.id}`}
+                        className="px-2 py-0.5 rounded bg-blue-50 text-[#1261A0] font-bold hover:underline inline-block"
+                      >
                         {tender._count?.bids || 0} Bids
-                      </span>
+                      </Link>
                     </td>
                     <td className="p-4 text-slate-500">{new Date(tender.submissionDeadline).toLocaleDateString()}</td>
                     <td className="p-4">
@@ -112,13 +114,32 @@ export default function TendersPage() {
                       </span>
                     </td>
                     <td className="p-4">
-                      <Link
-                        href={`/tenders/${tender.id}/requirements`}
-                        className="px-3 py-1.5 bg-[#0B3A5B] text-white text-[11px] font-bold rounded hover:bg-[#082C46] transition inline-flex items-center gap-1"
-                      >
-                        <span>View Reqs ({tender._count?.requirements || 8})</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/tenders/${tender.id}/requirements`}
+                          className="px-2.5 py-1.5 bg-slate-100 text-[#0B3A5B] text-[11px] font-bold rounded hover:bg-slate-200 transition inline-flex items-center gap-1"
+                        >
+                          <span>Reqs ({tender._count?.requirements || 0})</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </Link>
+                        {user?.role === 'BIDDER' ? (
+                          <Link
+                            href={`/bidder/dashboard?tenderId=${tender.id}`}
+                            className="px-2.5 py-1.5 bg-[#0B3A5B] text-white text-[11px] font-bold rounded hover:bg-[#082C46] transition inline-flex items-center gap-1 shadow-sm"
+                          >
+                            <FileText className="w-3 h-3 text-[#F4B400]" />
+                            <span>Bidder Portal</span>
+                          </Link>
+                        ) : (
+                          <Link
+                            href={`/bids?tenderId=${tender.id}`}
+                            className="px-2.5 py-1.5 bg-[#0B3A5B] text-white text-[11px] font-bold rounded hover:bg-[#082C46] transition inline-flex items-center gap-1 shadow-sm"
+                          >
+                            <FileCheck className="w-3 h-3 text-[#F4B400]" />
+                            <span>View Bids ({tender._count?.bids || 0})</span>
+                          </Link>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
