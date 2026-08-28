@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
+import { broadcastRealtimeEvent } from '@/lib/events';
 
 export const dynamic = 'force-dynamic';
 
@@ -137,6 +138,13 @@ export async function POST(req: NextRequest) {
         documents: true,
         complianceResults: true,
       },
+    });
+
+    broadcastRealtimeEvent('BID_CREATED', {
+      bidId: newBid.id,
+      tenderId: newBid.tenderId,
+      bidderName: newBid.bidderName,
+      status: newBid.status,
     });
 
     return NextResponse.json({ success: true, bid: newBid, message: 'Draft bid initialized' });

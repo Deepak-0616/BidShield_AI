@@ -25,25 +25,32 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanGstin = gstin.trim().toUpperCase();
-    const taxpayerProfile = await verifyGstTaxpayer(cleanGstin, companyName);
+    const taxpayerProfile = await verifyGstTaxpayer(cleanGstin);
 
-    const isGstValid = taxpayerProfile.isValid;
-    const verifiedStatus = isGstValid ? taxpayerProfile.gstStatus : 'UNVERIFIED';
+    if (!taxpayerProfile.isValid) {
+      return NextResponse.json(
+        { success: false, error: { code: 'INVALID_GSTIN', message: 'GSTIN format or checksum validation failed.' } },
+        { status: 400 }
+      );
+    }
+
+    const isLive = taxpayerProfile.liveLookupStatus === 'LIVE_VERIFIED' && taxpayerProfile.gstStatus === 'ACTIVE';
+    const verifiedStatus = isLive ? 'ACTIVE' : 'UNVERIFIED';
 
     const updatedUser = await prisma.user.update({
       where: { id: session.userId },
       data: {
         gstin: cleanGstin,
         pan: taxpayerProfile.extractedPan || (cleanGstin.length >= 12 ? cleanGstin.substring(2, 12) : null),
-        companyName: taxpayerProfile.legalName || taxpayerProfile.tradeName || companyName || undefined,
-        legalName: taxpayerProfile.legalName || companyName || undefined,
-        tradeName: taxpayerProfile.tradeName || tradeName || undefined,
-        constitution: taxpayerProfile.constitution || undefined,
-        registrationDate: taxpayerProfile.registrationDate || undefined,
-        address: taxpayerProfile.registeredAddress || (taxpayerProfile.stateJurisdiction ? `State: ${taxpayerProfile.stateJurisdiction}` : undefined),
+        companyName: isLive ? (taxpayerProfile.legalName || taxpayerProfile.tradeName || null) : null,
+        legalName: isLive ? taxpayerProfile.legalName : null,
+        tradeName: isLive ? taxpayerProfile.tradeName : null,
+        constitution: isLive ? taxpayerProfile.constitution : null,
+        registrationDate: isLive ? taxpayerProfile.registrationDate : null,
+        address: isLive ? taxpayerProfile.registeredAddress : null,
         gstStatus: verifiedStatus,
-        gstVerifiedAt: isGstValid ? new Date() : null,
-        gstVerificationRaw: JSON.stringify(taxpayerProfile),
+        gstVerifiedAt: isLive ? new Date() : null,
+        gstVerificationRaw: JSON.stringify(taxpayerProfile.evidence),
       },
     });
 
@@ -63,9 +70,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: isGstValid
-        ? 'GSTIN verified and statutory profile saved to database.'
-        : 'GSTIN recorded as Unverified (Structural checksum or format invalid).',
+      message: isLive
+        ? 'GSTIN verified and live taxpayer profile saved to database.'
+        : 'GSTIN recorded as Unverified (Live verification unavailable).',
       user: {
         id: updatedUser.id,
         name: updatedUser.name,

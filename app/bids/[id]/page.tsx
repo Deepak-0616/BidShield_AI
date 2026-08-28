@@ -81,6 +81,31 @@ export default function BidDetailDemoPage() {
 
   useEffect(() => {
     fetchBid();
+
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/realtime');
+      eventSource.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          if (
+            event.data?.bidId === bidId ||
+            event.type === 'BID_UPDATED' ||
+            event.type === 'COMPLIANCE_EVALUATED' ||
+            event.type === 'DOCUMENT_UPLOADED'
+          ) {
+            fetchBid();
+          }
+        } catch {}
+      };
+    } catch {}
+
+    const poll = setInterval(() => fetchBid(), 4000);
+
+    return () => {
+      if (eventSource) eventSource.close();
+      clearInterval(poll);
+    };
   }, [bidId]);
 
   const handleRunCompliance = async () => {

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { calculateBidRisk } from '@/lib/risk-engine';
 import { createAuditLog } from '@/lib/audit';
+import { broadcastRealtimeEvent } from '@/lib/events';
 import path from 'path';
 import fs from 'fs';
 
@@ -18,28 +19,18 @@ export async function POST(req: NextRequest) {
     let targetBidId = bidIdInput;
 
     // If bidId not explicitly provided, find active bid for logged-in bidder
-    if (!targetBidId) {
-      const userEmail = session?.email || 'bidder@novatech.demo';
-      const user = await prisma.user.findUnique({ where: { email: userEmail } });
-
-      if (user) {
-        const activeBid = await prisma.bid.findFirst({
-          where: { bidderId: user.id },
-          orderBy: { submittedAt: 'desc' },
-        });
-        if (activeBid) {
-          targetBidId = activeBid.id;
-        }
+    if (!targetBidId && session?.userId) {
+      const activeBid = await prisma.bid.findFirst({
+        where: { bidderId: session.userId },
+        orderBy: { submittedAt: 'desc' },
+      });
+      if (activeBid) {
+        targetBidId = activeBid.id;
       }
     }
 
     if (!targetBidId) {
-      const fallbackBid = await prisma.bid.findFirst({ orderBy: { submittedAt: 'desc' } });
-      targetBidId = fallbackBid?.id || null;
-    }
-
-    if (!targetBidId) {
-      return NextResponse.json({ success: false, error: { message: 'No active bid found for upload.' } }, { status: 400 });
+      return NextResponse.json({ success: false, error: { message: 'No active bid found for upload. Please specify bidId.' } }, { status: 400 });
     }
 
     const bid = await prisma.bid.findUnique({
@@ -230,6 +221,14 @@ export async function POST(req: NextRequest) {
         riskScore: riskResult.riskScore,
         riskLevel: riskResult.riskLevel,
       },
+    });
+
+    broadcastRealtimeEvent('BID_UPDATED', {
+      bidId: bid.id,
+      bidderName: bid.bidderName,
+      documentType,
+      complianceScore: riskResult.complianceScore,
+      riskLevel: riskResult.riskLevel,
     });
 
     await createAuditLog({

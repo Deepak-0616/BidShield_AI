@@ -363,7 +363,10 @@ export async function POST(req: NextRequest, { params }: { params: { provider: s
 
     switch (provider) {
       case 'GST': {
-        const targetGstin = gstin || body.referenceNumber || body.inputValue || '27AAACN1234Q1Z5';
+        const targetGstin = gstin || body.referenceNumber || body.inputValue;
+        if (!targetGstin || typeof targetGstin !== 'string' || targetGstin.trim().length === 0) {
+          return NextResponse.json({ success: false, error: { message: 'GSTIN is required' } }, { status: 400 });
+        }
         const taxpayerProfile = await verifyGstTaxpayer(targetGstin, legalName);
 
         responsePayload = {
@@ -383,11 +386,13 @@ export async function POST(req: NextRequest, { params }: { params: { provider: s
           panEntityType: taxpayerProfile.panEntityType,
           checksumValid: taxpayerProfile.checksumValid,
           calculatedChecksum: taxpayerProfile.calculatedChecksum,
-          confidence: taxpayerProfile.isValid ? 0.99 : 0.0,
+          confidence: taxpayerProfile.liveLookupStatus === 'LIVE_VERIFIED' ? 1.0 : taxpayerProfile.isValid ? 0.9 : 0.0,
           isValid: taxpayerProfile.isValid,
           demo: false,
           liveLookupStatus: taxpayerProfile.liveLookupStatus,
           validationType: taxpayerProfile.validationType,
+          source: taxpayerProfile.source,
+          disclaimer: taxpayerProfile.disclaimer,
           evidence: taxpayerProfile.evidence,
         };
         break;

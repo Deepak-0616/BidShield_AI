@@ -23,6 +23,26 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     fetchUsers();
+
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/realtime');
+      eventSource.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          if (event.type === 'USER_REGISTERED') {
+            fetchUsers();
+          }
+        } catch {}
+      };
+    } catch {}
+
+    const poll = setInterval(() => fetchUsers(), 5000);
+
+    return () => {
+      if (eventSource) eventSource.close();
+      clearInterval(poll);
+    };
   }, []);
 
   return (

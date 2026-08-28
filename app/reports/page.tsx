@@ -8,14 +8,42 @@ import { FileCheck2, Download, Eye, ShieldCheck, Award } from 'lucide-react';
 export default function ReportsPage() {
   const [bids, setBids] = useState<any[]>([]);
 
-  useEffect(() => {
-    fetch('/api/bids')
+  const fetchReports = (silent = false) => {
+    fetch('/api/bids', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setBids(data.bids);
+          setBids(data.bids || []);
         }
       });
+  };
+
+  useEffect(() => {
+    fetchReports();
+
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/realtime');
+      eventSource.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          if (
+            event.type === 'BID_CREATED' ||
+            event.type === 'BID_UPDATED' ||
+            event.type === 'COMPLIANCE_EVALUATED'
+          ) {
+            fetchReports(true);
+          }
+        } catch {}
+      };
+    } catch {}
+
+    const poll = setInterval(() => fetchReports(true), 4000);
+
+    return () => {
+      if (eventSource) eventSource.close();
+      clearInterval(poll);
+    };
   }, []);
 
   return (

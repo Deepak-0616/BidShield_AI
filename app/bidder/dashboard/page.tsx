@@ -104,6 +104,40 @@ function BidderDashboardContent() {
     }
   }, [user]);
 
+  // Setup Real-time SSE Stream listener for live tender/bid updates
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/realtime');
+      eventSource.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          if (
+            event.type === 'TENDER_CREATED' ||
+            event.type === 'TENDER_UPDATED' ||
+            event.type === 'BID_CREATED' ||
+            event.type === 'BID_UPDATED' ||
+            event.type === 'COMPLIANCE_EVALUATED'
+          ) {
+            loadInitialData();
+            if (selectedTenderId) {
+              loadTenderAndBid(selectedTenderId);
+            }
+          }
+        } catch {}
+      };
+    } catch {}
+
+    const poll = setInterval(() => {
+      loadInitialData();
+    }, 4000);
+
+    return () => {
+      if (eventSource) eventSource.close();
+      clearInterval(poll);
+    };
+  }, [selectedTenderId]);
+
   // Sync if URL search params change
   useEffect(() => {
     if (paramTenderId && paramTenderId !== selectedTenderId) {

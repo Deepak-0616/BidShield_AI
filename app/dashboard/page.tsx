@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import {
@@ -18,6 +18,10 @@ import {
   Users,
   Building2,
   Scale,
+  Radio,
+  RefreshCw,
+  Bell,
+  Sparkles,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -38,67 +42,200 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [liveToast, setLiveToast] = useState<{ id: string; message: string; type: 'bid' | 'compliance' | 'update' } | null>(null);
+  const [newlyUpdatedBidIds, setNewlyUpdatedBidIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    fetch('/api/dashboard/summary')
-      .then((res) => res.json())
-      .then((json) => {
-        if (json.success) {
-          setData(json);
-        }
-      })
-      .catch((err) => console.error('Dashboard fetch error:', err))
-      .finally(() => setLoading(false));
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showToast = useCallback((message: string, type: 'bid' | 'compliance' | 'update') => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setLiveToast({ id: `${Date.now()}`, message, type });
+    toastTimerRef.current = setTimeout(() => {
+      setLiveToast(null);
+    }, 6000);
   }, []);
 
+  const fetchDashboardData = useCallback(async (showRefreshingSpinner = false) => {
+    if (showRefreshingSpinner) setIsRefreshing(true);
+    try {
+      const res = await fetch('/api/dashboard/summary', { cache: 'no-store' });
+      const json = await res.json();
+      if (json.success) {
+        setData(json);
+        setLastUpdated(new Date());
+      }
+    } catch (err) {
+      console.error('Dashboard fetch error:', err);
+    } finally {
+      setLoading(false);
+      if (showRefreshingSpinner) setIsRefreshing(false);
+    }
+  }, []);
+
+  // Initial fetch and Realtime SSE Stream
+  useEffect(() => {
+    fetchDashboardData();
+
+    // Setup Server-Sent Events (SSE) stream for instant real-time pushes
+    let eventSource: EventSource | null = null;
+
+    try {
+      eventSource = new EventSource('/api/realtime');
+
+      eventSource.onopen = () => {
+        setIsLiveConnected(true);
+      };
+
+      eventSource.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+
+          if (event.type === 'BID_CREATED') {
+            fetchDashboardData();
+            const bidderName = event.data?.bidderName || 'A bidder';
+            if (event.data?.bidId) {
+              setNewlyUpdatedBidIds((prev) => new Set(prev).add(event.data.bidId));
+            }
+            showToast(`New Bid submitted by ${bidderName}!`, 'bid');
+          } else if (event.type === 'BID_UPDATED' || event.type === 'DOCUMENT_UPLOADED') {
+            fetchDashboardData();
+            if (event.data?.bidId) {
+              setNewlyUpdatedBidIds((prev) => new Set(prev).add(event.data.bidId));
+            }
+            if (event.data?.documentType) {
+              showToast(`New evidence document uploaded: ${event.data.documentType}`, 'update');
+            } else {
+              showToast(`Bid details updated in real time.`, 'update');
+            }
+          } else if (event.type === 'COMPLIANCE_EVALUATED') {
+            fetchDashboardData();
+            if (event.data?.bidId) {
+              setNewlyUpdatedBidIds((prev) => new Set(prev).add(event.data.bidId));
+            }
+            const score = event.data?.complianceScore ?? '';
+            const risk = event.data?.riskLevel ?? '';
+            showToast(`AI Compliance evaluated: Score ${score}%, Risk: ${risk}`, 'compliance');
+          } else if (event.type === 'USER_REGISTERED' || event.type === 'TENDER_CREATED') {
+            fetchDashboardData();
+          }
+        } catch {
+          // Ignore heartbeat or non-JSON payloads
+        }
+      };
+
+      eventSource.onerror = () => {
+        setIsLiveConnected(false);
+      };
+    } catch (err) {
+      console.warn('Realtime SSE connection note:', err);
+    }
+
+    // Fallback periodic poll every 4 seconds to guarantee consistency
+    const pollInterval = setInterval(() => {
+      fetchDashboardData();
+    }, 4000);
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+      clearInterval(pollInterval);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, [fetchDashboardData, showToast]);
+
   const stats = data?.stats || {
-    activeTenders: 4,
-    totalBids: 8,
-    bidsUnderReview: 6,
-    approvedBids: 2,
+    activeTenders: 0,
+    totalBids: 0,
+    bidsUnderReview: 0,
+    approvedBids: 0,
     rejectedBids: 0,
-    highRiskBids: 2,
-    averageCompliance: 76.5,
-    pendingReviews: 12,
-    officersCount: 2,
-    biddersCount: 8,
+    highRiskBids: 0,
+    averageCompliance: 0,
+    pendingReviews: 0,
+    officersCount: 0,
+    biddersCount: 0,
     verifiedBiddersCount: 0,
     activeDebarmentsCount: 0,
-    totalDebarmentsCount: 3,
+    totalDebarmentsCount: 0,
   };
 
   const riskPieData = data?.riskDistribution || [
-    { name: 'Low Risk', value: 4, color: '#138A4B' },
-    { name: 'Medium Risk', value: 2, color: '#D98200' },
-    { name: 'High Risk', value: 2, color: '#C62828' },
+    { name: 'Low Risk', value: 0, color: '#138A4B' },
+    { name: 'Medium Risk', value: 0, color: '#D98200' },
+    { name: 'High Risk', value: 0, color: '#C62828' },
   ];
 
   const complianceBarData = data?.complianceOverview?.map((c: any) => ({
     category: c.category,
     compliance: c.compliant,
-  })) || [
-    { category: 'Legal', compliance: 100 },
-    { category: 'Financial', compliance: 80 },
-    { category: 'Technical', compliance: 85 },
-    { category: 'Experience', compliance: 90 },
-    { category: 'Local Content', compliance: 75 },
-    { category: 'Certification', compliance: 80 },
-  ];
+  })) || [];
 
   return (
     <RoleGuard allowedRoles={['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR']}>
       <DashboardLayout>
         <div className="space-y-6 max-w-7xl mx-auto">
-          {/* Title Header */}
+          {/* Real-time Live Toast Notification Banner */}
+          {liveToast && (
+            <div className="fixed top-20 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+              <div className="bg-[#0B3A5B] text-white px-4 py-3 rounded-xl shadow-2xl border border-[#F4B400]/40 flex items-center gap-3 text-xs max-w-md">
+                <div className="w-8 h-8 rounded-lg bg-[#F4B400]/20 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4 text-[#F4B400]" />
+                </div>
+                <div className="flex-1">
+                  <span className="font-black text-[#F4B400] block text-[10px] uppercase tracking-wider">
+                    ⚡ Live Real-Time Update
+                  </span>
+                  <p className="font-semibold text-slate-100 text-xs">{liveToast.message}</p>
+                </div>
+                <button
+                  onClick={() => setLiveToast(null)}
+                  className="text-slate-400 hover:text-white text-xs font-bold px-1"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Title Header with Live Streaming Status */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
             <div>
-              <h1 className="text-2xl font-black text-[#0B3A5B] tracking-tight">Procurement Intelligence Dashboard</h1>
-              <p className="text-xs text-slate-500 mt-1">
-                Active Role: <strong>{user?.role?.replace('_', ' ')}</strong> • Live database monitoring & compliance metrics
+              <div className="flex items-center gap-2.5 mb-1">
+                <h1 className="text-2xl font-black text-[#0B3A5B] tracking-tight">Procurement Intelligence Dashboard</h1>
+                {/* Live Realtime Status Pill */}
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-[#138A4B] border border-emerald-200 shadow-sm">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span>LIVE REAL-TIME STREAM</span>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 flex items-center gap-2">
+                <span>Active Role: <strong>{user?.role?.replace('_', ' ')}</strong></span>
+                <span>•</span>
+                <span className="text-slate-400">
+                  Last synced: {lastUpdated.toLocaleTimeString()}
+                </span>
               </p>
             </div>
-            {user?.role === 'PROCUREMENT_OFFICER' && (
-              <div className="flex items-center gap-3">
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => fetchDashboardData(true)}
+                disabled={isRefreshing}
+                title="Sync live data now"
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 transition flex items-center gap-1.5 disabled:opacity-60 shadow-sm"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#0B3A5B]' : ''}`} />
+                <span>{isRefreshing ? 'Syncing...' : 'Sync Now'}</span>
+              </button>
+
+              {user?.role === 'PROCUREMENT_OFFICER' && (
                 <Link
                   href="/tenders/new"
                   className="px-4 py-2 bg-[#0B3A5B] text-white text-xs font-bold rounded-lg shadow hover:bg-[#082C46] transition flex items-center gap-2"
@@ -106,10 +243,9 @@ export default function DashboardPage() {
                   <FileText className="w-4 h-4 text-[#F4B400]" />
                   <span>Open a Tender</span>
                 </Link>
-              </div>
-            )}
-            {user?.role === 'AUDITOR' && (
-              <div className="flex items-center gap-3">
+              )}
+
+              {user?.role === 'AUDITOR' && (
                 <Link
                   href="/audit"
                   className="px-4 py-2 bg-[#0B3A5B] text-white text-xs font-bold rounded-lg shadow hover:bg-[#082C46] transition flex items-center gap-2"
@@ -117,8 +253,8 @@ export default function DashboardPage() {
                   <Scale className="w-4 h-4 text-[#F4B400]" />
                   <span>Auditor Decision Workspace</span>
                 </Link>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Live Statistics Grid */}
@@ -316,16 +452,32 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-medium">
-                  {data?.recentBids?.map((b: any) => (
-                    <tr key={b.id} className="hover:bg-slate-50 transition">
-                      <td className="p-4">
-                        <Link href={`/bids/${b.id}`} className="font-bold text-[#0B3A5B] hover:underline block">
-                          {b.bidderName}
-                        </Link>
-                        <span className="text-[10px] text-slate-400">
-                          {b.bidder?.gstStatus === 'ACTIVE' ? `GST: ${b.bidder.gstin}` : 'GST Unverified'}
-                        </span>
-                      </td>
+                  {data?.recentBids?.map((b: any) => {
+                    const isNewlyUpdated = newlyUpdatedBidIds.has(b.id);
+                    return (
+                      <tr
+                        key={b.id}
+                        className={`transition duration-500 ${
+                          isNewlyUpdated
+                            ? 'bg-emerald-50/60 border-l-4 border-[#138A4B]'
+                            : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <Link href={`/bids/${b.id}`} className="font-bold text-[#0B3A5B] hover:underline block">
+                              {b.bidderName}
+                            </Link>
+                            {isNewlyUpdated && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-[#138A4B] animate-pulse">
+                                LIVE
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-400">
+                            {b.bidder?.gstStatus === 'ACTIVE' ? `GST: ${b.bidder.gstin}` : 'GST Unverified'}
+                          </span>
+                        </td>
                       <td className="p-4 text-slate-600">
                         <span className="font-semibold block">{b.tender?.tenderNumber}</span>
                         <span className="text-[10px] text-slate-400">{b.tender?.title}</span>
@@ -382,7 +534,8 @@ export default function DashboardPage() {
                         </Link>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

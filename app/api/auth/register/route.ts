@@ -51,11 +51,19 @@ export async function POST(req: NextRequest) {
     let registeredAddress: string | null = null;
     let gstVerificationRaw: string | null = null;
 
-    if (gstin && typeof gstin === 'string' && gstin.trim().length === 15) {
+    if (gstin && typeof gstin === 'string') {
       cleanGstin = gstin.trim().toUpperCase();
       const taxpayer = await verifyGstTaxpayer(cleanGstin);
+
+      if (!taxpayer.isValid) {
+        return NextResponse.json(
+          { success: false, error: { code: 'INVALID_GSTIN', message: 'GSTIN format or checksum validation failed.' } },
+          { status: 400 }
+        );
+      }
+
       extractedPan = taxpayer.extractedPan;
-      gstVerificationRaw = JSON.stringify(taxpayer);
+      gstVerificationRaw = JSON.stringify(taxpayer.evidence);
 
       // Only assign company details if live provider returned actual data
       if (taxpayer.liveLookupStatus === 'LIVE_VERIFIED' && taxpayer.gstStatus === 'ACTIVE') {
@@ -69,6 +77,11 @@ export async function POST(req: NextRequest) {
       } else {
         verifiedGstStatus = 'UNVERIFIED';
         verifiedAt = null;
+        legalName = null;
+        tradeName = null;
+        constitution = null;
+        registrationDate = null;
+        registeredAddress = null;
       }
     }
 

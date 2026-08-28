@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { checkDebarmentStatus } from '@/lib/debarment-check';
 import { createAuditLog } from '@/lib/audit';
+import { broadcastRealtimeEvent } from '@/lib/events';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -146,6 +147,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         finalReviewStatus,
         status: finalReviewStatus === 'APPROVED' ? 'COMPLETED' : finalReviewStatus === 'REJECTED' ? 'REJECTED' : 'UNDER_REVIEW',
       },
+    });
+
+    broadcastRealtimeEvent('BID_UPDATED', {
+      bidId: updatedBid.id,
+      finalReviewStatus: updatedBid.finalReviewStatus,
+      status: updatedBid.status,
     });
 
     await createAuditLog({

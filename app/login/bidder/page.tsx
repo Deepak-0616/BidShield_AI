@@ -71,7 +71,7 @@ export default function BidderLoginPage() {
   // CALL GST TAXPAYER VERIFICATION API
   const handleFetchGstProfile = async (targetGstin: string) => {
     const cleanGstin = targetGstin.trim().toUpperCase();
-    if (cleanGstin.length < 15) {
+    if (cleanGstin.length !== 15) {
       setGstStatusState('IDLE');
       setGstTaxpayerData(null);
       return;
@@ -91,44 +91,41 @@ export default function BidderLoginPage() {
       const json = await res.json();
       if (json.success && json.data) {
         const data = json.data;
-        if (data.isValid || data.checksumValid || data.formatStatus === 'VALID_STRUCTURE_AND_CHECKSUM') {
-          const isLive = data.liveLookupStatus === 'LIVE_VERIFIED' && Boolean(data.legalName || data.tradeName);
-
-          if (isLive) {
-            setGstStatusState('LIVE_VERIFIED');
-            setGstTaxpayerData({
-              legalName: data.legalName || '',
-              tradeName: data.tradeName || '',
-              gstStatus: data.gstStatus || 'ACTIVE',
-              constitution: data.constitution || '',
-              registrationDate: data.registrationDate || '',
-              registeredAddress: data.registeredAddress || '',
-              stateJurisdiction: data.stateJurisdiction || '',
-              extractedPan: data.extractedPan || '',
-              isLiveVerified: true,
-            });
-          } else {
-            // Structure verified, but live taxpayer verification is unavailable
-            setGstStatusState('STRUCTURE_VERIFIED');
-            setGstTaxpayerData({
-              legalName: '',
-              tradeName: '',
-              gstStatus: 'UNVERIFIED',
-              constitution: '',
-              registrationDate: '',
-              registeredAddress: '',
-              stateJurisdiction: data.stateJurisdiction || '',
-              extractedPan: data.extractedPan || '',
-              isLiveVerified: false,
-            });
-          }
+        if (data.liveLookupStatus === 'LIVE_VERIFIED' && data.gstStatus === 'ACTIVE') {
+          setGstStatusState('LIVE_VERIFIED');
+          setGstTaxpayerData({
+            legalName: data.legalName || '',
+            tradeName: data.tradeName || '',
+            gstStatus: data.gstStatus || 'ACTIVE',
+            constitution: data.constitution || '',
+            registrationDate: data.registrationDate || '',
+            registeredAddress: data.registeredAddress || '',
+            stateJurisdiction: data.stateJurisdiction || '',
+            extractedPan: data.extractedPan || '',
+            isLiveVerified: true,
+          });
+        } else if (data.isValid || data.formatStatus === 'VALID_STRUCTURE_AND_CHECKSUM') {
+          // GSTIN structure is valid, but live taxpayer verification is unavailable
+          setGstStatusState('STRUCTURE_VERIFIED');
+          setGstTaxpayerData({
+            legalName: '',
+            tradeName: '',
+            gstStatus: 'UNVERIFIED',
+            constitution: '',
+            registrationDate: '',
+            registeredAddress: '',
+            stateJurisdiction: data.stateJurisdiction || '',
+            extractedPan: data.extractedPan || '',
+            isLiveVerified: false,
+          });
         } else {
           setGstStatusState('INVALID');
           setGstTaxpayerData(null);
         }
       } else {
-        setGstStatusState('UNAVAILABLE');
+        setGstStatusState('INVALID');
         setGstTaxpayerData(null);
+        setError(json.error?.message || 'Invalid GSTIN');
       }
     } catch (err) {
       setGstStatusState('UNAVAILABLE');
@@ -382,14 +379,14 @@ export default function BidderLoginPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-[#0B3A5B]">
                         <CheckCircle2 className="w-4 h-4 text-[#138A4B] shrink-0" />
-                        <span>GSTIN structure verified</span>
+                        <span>GSTIN structure valid</span>
                       </div>
                       <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px] font-bold">
                         UNVERIFIED
                       </span>
                     </div>
                     <p className="text-[11px] font-normal text-slate-500 pl-5.5">
-                      Live taxpayer verification unavailable (Credentials unconfigured).
+                      Live taxpayer verification unavailable / Unverified.
                     </p>
                   </div>
                 )}
@@ -397,7 +394,7 @@ export default function BidderLoginPage() {
                 {gstStatusState === 'NOT_FOUND' && (
                   <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs font-bold text-amber-800 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
-                    <span>GSTIN not found</span>
+                    <span>GSTIN not found in Taxpayer Registry</span>
                   </div>
                 )}
 
@@ -411,7 +408,7 @@ export default function BidderLoginPage() {
                 {gstStatusState === 'UNAVAILABLE' && (
                   <div className="p-2.5 bg-slate-100 border border-slate-300 rounded-lg text-xs font-bold text-slate-700 flex items-center gap-2">
                     <HelpCircle className="w-4 h-4 shrink-0 text-slate-500" />
-                    <span>Verification unavailable</span>
+                    <span>Live taxpayer verification unavailable / Unverified</span>
                   </div>
                 )}
               </div>
@@ -423,7 +420,11 @@ export default function BidderLoginPage() {
                     <Lock className="w-3.5 h-3.5 text-slate-400" />
                     <span>2. GST-Derived Company Details (Locked / Read-Only)</span>
                   </h3>
-                  <span className="text-[10px] text-slate-400 font-medium">Source: Live GST API</span>
+                  {gstStatusState === 'LIVE_VERIFIED' && (
+                    <span className="text-[10px] text-[#138A4B] font-bold bg-green-50 px-2 py-0.5 rounded border border-green-200">
+                      Source: Live GST API
+                    </span>
+                  )}
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-3">

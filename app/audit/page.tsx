@@ -69,6 +69,31 @@ export default function AuditorPage() {
 
   useEffect(() => {
     fetchAuditorData();
+
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/realtime');
+      eventSource.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          if (
+            event.type === 'BID_CREATED' ||
+            event.type === 'BID_UPDATED' ||
+            event.type === 'COMPLIANCE_EVALUATED' ||
+            event.type === 'TENDER_CREATED'
+          ) {
+            fetchAuditorData();
+          }
+        } catch {}
+      };
+    } catch {}
+
+    const poll = setInterval(() => fetchAuditorData(), 4000);
+
+    return () => {
+      if (eventSource) eventSource.close();
+      clearInterval(poll);
+    };
   }, []);
 
   const openInspection = async (bidId: string) => {

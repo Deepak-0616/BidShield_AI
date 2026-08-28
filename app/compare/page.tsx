@@ -24,24 +24,52 @@ export default function CompareBiddersPage() {
   }, []);
 
   // Fetch bids whenever selected tender changes
-  const fetchCompareBids = (tenderId: string) => {
-    setLoading(true);
+  const fetchCompareBids = (tenderId: string, silent = false) => {
+    if (!silent) setLoading(true);
     fetch('/api/compare', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tenderId: tenderId === 'ALL' ? undefined : tenderId }),
+      cache: 'no-store',
     })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setBids(data.bids);
+          setBids(data.bids || []);
         }
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
   };
 
   useEffect(() => {
     fetchCompareBids(selectedTenderId);
+
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/realtime');
+      eventSource.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          if (
+            event.type === 'BID_CREATED' ||
+            event.type === 'BID_UPDATED' ||
+            event.type === 'COMPLIANCE_EVALUATED' ||
+            event.type === 'TENDER_CREATED'
+          ) {
+            fetchCompareBids(selectedTenderId, true);
+          }
+        } catch {}
+      };
+    } catch {}
+
+    const poll = setInterval(() => fetchCompareBids(selectedTenderId, true), 4000);
+
+    return () => {
+      if (eventSource) eventSource.close();
+      clearInterval(poll);
+    };
   }, [selectedTenderId]);
 
   // Derive dynamic list of requirements from bids
