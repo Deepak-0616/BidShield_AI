@@ -22,6 +22,7 @@ import {
   RefreshCw,
   Search,
   Eye,
+  Scale,
 } from 'lucide-react';
 
 import RoleGuard from '@/components/auth/RoleGuard';
@@ -34,9 +35,12 @@ export default function BidDetailDemoPage() {
 
   const [bid, setBid] = useState<any>(null);
   const [categoryScores, setCategoryScores] = useState<any>(null);
+  const [debarmentStatus, setDebarmentStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [recalculating, setRecalculating] = useState(false);
   const [updatingDecision, setUpdatingDecision] = useState(false);
+  const [auditComment, setAuditComment] = useState('');
+  const [decisionError, setDecisionError] = useState('');
 
   // Chat State for Ask BidShield
   const [chatOpen, setChatOpen] = useState(true);
@@ -45,7 +49,7 @@ export default function BidDetailDemoPage() {
     {
       role: 'ASSISTANT',
       message:
-        'Hello Officer. I am Ask BidShield — your evidence-grounded AI procurement assistant. Ask me anything about NovaTech or Apex Digital compliance findings.',
+        'Hello. I am BidShield AI — your evidence-grounded AI procurement assistant. Ask me anything about this bid compliance findings.',
       citations: [],
     },
   ]);
@@ -62,6 +66,14 @@ export default function BidDetailDemoPage() {
         if (data.success) {
           setBid(data.bid);
           setCategoryScores(data.categoryScores);
+          setDebarmentStatus(data.debarmentStatus);
+          setChatMessages([
+            {
+              role: 'ASSISTANT',
+              message: `Hello. I am BidShield AI — your evidence-grounded AI procurement assistant. I have indexed all submitted compliance documents for ${data.bid.bidderName} (${data.bid.tender?.tenderNumber}). Ask me any questions regarding eligibility, certifications, turnover, or technical criteria.`,
+              citations: [],
+            },
+          ]);
         }
       })
       .finally(() => setLoading(false));
@@ -69,6 +81,31 @@ export default function BidDetailDemoPage() {
 
   useEffect(() => {
     fetchBid();
+
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/realtime');
+      eventSource.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          if (
+            event.data?.bidId === bidId ||
+            event.type === 'BID_UPDATED' ||
+            event.type === 'COMPLIANCE_EVALUATED' ||
+            event.type === 'DOCUMENT_UPLOADED'
+          ) {
+            fetchBid();
+          }
+        } catch {}
+      };
+    } catch {}
+
+    const poll = setInterval(() => fetchBid(), 4000);
+
+    return () => {
+      if (eventSource) eventSource.close();
+      clearInterval(poll);
+    };
   }, [bidId]);
 
   const handleRunCompliance = async () => {
@@ -90,18 +127,26 @@ export default function BidDetailDemoPage() {
   const handleUpdateDecision = async (status: string) => {
     if (!bidId) return;
     setUpdatingDecision(true);
+    setDecisionError('');
     try {
       const res = await fetch(`/api/bids/${bidId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ finalReviewStatus: status }),
+        body: JSON.stringify({
+          finalReviewStatus: status,
+          reviewComments: auditComment || 'Decision recorded by Auditor',
+          overrideReason: debarmentStatus?.hasActiveDebarment ? auditComment : undefined,
+        }),
       });
       const data = await res.json();
       if (data.success) {
+        setAuditComment('');
         fetchBid();
+      } else {
+        setDecisionError(data.error?.message || 'Failed to record audit decision.');
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      setDecisionError(e.message || 'Network error recording decision.');
     } finally {
       setUpdatingDecision(false);
     }
@@ -151,8 +196,12 @@ export default function BidDetailDemoPage() {
     );
   }
 
-  const isNovaTech = bid?.bidderName?.includes('NovaTech');
   const isOfficerOrAdmin = user?.role === 'ADMIN' || user?.role === 'PROCUREMENT_OFFICER';
+
+  // Identify any non-compliant or missing mandatory items dynamically
+  const nonCompliantMandatory = bid?.complianceResults?.filter(
+    (cr: any) => cr.requirement?.mandatory && (cr.status === 'NON_COMPLIANT' || cr.status === 'MISSING')
+  ) || [];
 
   return (
     <RoleGuard allowedRoles={['ADMIN', 'PROCUREMENT_OFFICER', 'AUDITOR']}>
@@ -167,7 +216,7 @@ export default function BidDetailDemoPage() {
                 <span className="px-2.5 py-0.5 rounded bg-[#0B3A5B]/10 text-[#0B3A5B] font-bold text-[10px]">
                   {bid?.tender?.tenderNumber}
                 </span>
-                <span className="text-xs text-slate-500 font-medium">Submitted {new Date(bid?.submittedAt).toLocaleDateString()}</span>
+                <span className="text-xs text-slate-500 font-medium">Submitted {bid?.submittedAt ? new Date(bid.submittedAt).toLocaleDateString() : 'N/A'}</span>
                 <span className="px-2 py-0.5 rounded bg-[#138A4B]/10 text-[#138A4B] font-bold text-[10px]">
                   STATUS: {bid?.finalReviewStatus || bid?.status}
                 </span>
@@ -243,21 +292,78 @@ export default function BidDetailDemoPage() {
             </div>
           </div>
 
-          {/* Officer Final Decision Actions Bar */}
-          {isOfficerOrAdmin && (
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div>
-                <h3 className="text-xs font-bold text-[#0B3A5B] uppercase tracking-wider">Procurement Officer Final Decision</h3>
-                <p className="text-[11px] text-slate-500">Record final evaluation judgment based on AI evidence support</p>
+          {/* STATUTORY DEBARMENT REGISTRY STATUS BANNER */}
+          {debarmentStatus?.hasActiveDebarment ? (
+            <div className="bg-red-50 border-2 border-red-300 p-4 rounded-xl shadow-sm space-y-1">
+              <div className="flex items-center gap-2 text-[#C62828] font-black text-xs">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <span>CRITICAL STATUTORY BLOCK: ACTIVE DEBARMENT RECORD MATCHED</span>
               </div>
-              <div className="flex items-center gap-2">
+              <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                {debarmentStatus.warningMessage}
+              </p>
+              <div className="text-[10px] font-mono text-red-800 pt-1">
+                Order: {debarmentStatus.activeMatches[0]?.orderNumber} • Authority: {debarmentStatus.activeMatches[0]?.debarringAuthority}
+              </div>
+            </div>
+          ) : debarmentStatus?.historicalMatches?.length > 0 ? (
+            <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl shadow-sm text-xs space-y-1">
+              <div className="flex items-center gap-2 text-[#1261A0] font-bold">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>Debarment Registry Standing: Clear (Historical Record on File)</span>
+              </div>
+              <p className="text-[11px] text-slate-600">
+                {debarmentStatus.warningMessage}
+              </p>
+            </div>
+          ) : (
+            <div className="bg-green-50 border border-green-200 p-3 rounded-xl shadow-sm text-xs flex items-center gap-2 text-[#138A4B] font-bold">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>Debarment Registry Clear: No active or historical debarment orders matched for this entity.</span>
+            </div>
+          )}
+
+          {/* Role-Based Decision Actions Bar */}
+          {user?.role === 'AUDITOR' || user?.role === 'ADMIN' ? (
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-xs font-bold text-[#0B3A5B] uppercase tracking-wider flex items-center gap-1.5">
+                    <Scale className="w-4 h-4 text-[#F4B400]" />
+                    <span>Auditor Final Decision Action</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500">Record final statutory approval, rejection, or request correction with audit trail logging</p>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-[#0B3A5B]">
+                  Current Status: {bid?.finalReviewStatus || 'UNDER_REVIEW'}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="Enter audit rationale / decision comments (Mandatory for approval/rejection)..."
+                  value={auditComment}
+                  onChange={(e) => setAuditComment(e.target.value)}
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#0B3A5B]"
+                />
+              </div>
+
+              {decisionError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-[#C62828] text-xs font-bold rounded-lg flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{decisionError}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-1">
                 <button
-                  onClick={() => handleUpdateDecision('APPROVED')}
+                  onClick={() => handleUpdateDecision('CLARIFICATION_REQUESTED')}
                   disabled={updatingDecision}
-                  className="px-4 py-2 bg-[#138A4B] text-white text-xs font-bold rounded-lg hover:bg-[#0f6f3c] transition shadow flex items-center gap-1.5"
+                  className="px-4 py-2 bg-[#D98200] text-white text-xs font-bold rounded-lg hover:bg-[#ad6800] transition shadow flex items-center gap-1.5"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Approve Bid</span>
+                  <AlertCircle className="w-4 h-4" />
+                  <span>Request Clarification</span>
                 </button>
                 <button
                   onClick={() => handleUpdateDecision('REJECTED')}
@@ -268,30 +374,44 @@ export default function BidDetailDemoPage() {
                   <span>Reject Bid</span>
                 </button>
                 <button
-                  onClick={() => handleUpdateDecision('CLARIFICATION_REQUESTED')}
+                  onClick={() => handleUpdateDecision('APPROVED')}
                   disabled={updatingDecision}
-                  className="px-4 py-2 bg-[#D98200] text-white text-xs font-bold rounded-lg hover:bg-[#ad6800] transition shadow flex items-center gap-1.5"
+                  className="px-4 py-2 bg-[#138A4B] text-white text-xs font-bold rounded-lg hover:bg-[#0f6f3c] transition shadow flex items-center gap-1.5"
                 >
-                  <AlertCircle className="w-4 h-4" />
-                  <span>Request Clarification</span>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Approve & Award Bid</span>
                 </button>
               </div>
             </div>
-          )}
+          ) : user?.role === 'PROCUREMENT_OFFICER' ? (
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
+              <div>
+                <span className="font-bold text-[#0B3A5B] block">Procurement Officer Review Mode</span>
+                <span className="text-[11px] text-slate-500">Inspection & verification active. Final approval/award decisions are executed exclusively by the Auditor workflow.</span>
+              </div>
+              <span className="px-2.5 py-1 rounded bg-blue-50 text-[#0B3A5B] font-bold text-[10px]">
+                Status: {bid?.finalReviewStatus || 'UNDER_REVIEW'}
+              </span>
+            </div>
+          ) : null}
 
-          {/* Contradiction / Inconsistency Warning Alert */}
-          {isNovaTech && (
+          {/* Dynamic Risk & Non-Compliance Alert */}
+          {nonCompliantMandatory.length > 0 && (
             <div className="bg-[#FFF8E1] border-l-4 border-[#D98200] p-4 rounded-xl shadow-sm flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-[#D98200] shrink-0 mt-0.5" />
               <div>
                 <h3 className="text-xs font-bold text-[#D98200] uppercase tracking-wider">
-                  Potential Timeline Inconsistency Detected
+                  Mandatory Non-Compliance Flags Detected ({nonCompliantMandatory.length})
                 </h3>
-                <p className="text-xs text-slate-700 mt-1 leading-relaxed">
-                  Entity Profile reflects Incorporation in <strong>April 2018</strong> (8 years entity age), but submitted Work Experience Certificate reflects <strong>3 years</strong> of contract operations starting 2023.
-                </p>
-                <p className="text-[11px] text-slate-500 mt-1 italic">
-                  Note: Entity age and relevant IT domain experience are distinct metrics. Manual verification by procurement authority recommended.
+                <ul className="text-xs text-slate-700 mt-1 space-y-1">
+                  {nonCompliantMandatory.map((ncm: any) => (
+                    <li key={ncm.id}>
+                      <strong>{ncm.requirement?.requirementCode} ({ncm.requirement?.title}):</strong> {ncm.reason}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[11px] text-slate-500 mt-2 italic">
+                  Deterministic rule engine flags mandatory non-compliance. Manual review by procurement authority required before awarding.
                 </p>
               </div>
             </div>
@@ -302,9 +422,9 @@ export default function BidDetailDemoPage() {
             {[
               { label: 'LEGAL', score: categoryScores?.LEGAL?.scorePercent ?? 100 },
               { label: 'FINANCIAL', score: categoryScores?.FINANCIAL?.scorePercent ?? 100 },
-              { label: 'TECHNICAL', score: isNovaTech ? 0 : 100 },
-              { label: 'EXPERIENCE', score: isNovaTech ? 60 : 100 },
-              { label: 'LOCAL CONTENT', score: isNovaTech ? 0 : 100 },
+              { label: 'TECHNICAL', score: categoryScores?.TECHNICAL?.scorePercent ?? 100 },
+              { label: 'EXPERIENCE', score: categoryScores?.EXPERIENCE?.scorePercent ?? 100 },
+              { label: 'LOCAL CONTENT', score: categoryScores?.LOCAL_CONTENT?.scorePercent ?? 100 },
               { label: 'CERTIFICATION', score: categoryScores?.CERTIFICATION?.scorePercent ?? 100 },
               { label: 'DOCUMENTATION', score: categoryScores?.DOCUMENTATION?.scorePercent ?? 100 },
             ].map((cat, i) => (

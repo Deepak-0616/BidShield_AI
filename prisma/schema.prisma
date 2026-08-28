@@ -21,6 +21,19 @@ model User {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
+  // Bidder verification profile
+  gstin              String?
+  pan                String?
+  companyName        String?
+  legalName          String?
+  tradeName          String?
+  gstStatus          String?   @default("UNVERIFIED") // UNVERIFIED, ACTIVE, CANCELLED, SUSPENDED, INVALID
+  constitution       String?   // Public Limited, Private Limited, Partnership, Proprietorship, etc.
+  registrationDate   String?
+  gstVerifiedAt      DateTime?
+  gstVerificationRaw String?   // Serialized JSON string for SQLite
+  address            String?
+
   tenders      Tender[]    @relation("CreatedTenders")
   bids         Bid[]       @relation("SubmittedBids")
   auditLogs    AuditLog[]
@@ -196,4 +209,22 @@ model RuleSetting {
   weight          Float    @default(1.0)
   mandatoryImpact Float    @default(30.0)
   updatedAt       DateTime @updatedAt
+}
+
+model DebarmentRegistry {
+  id                 String    @id @default(uuid())
+  firmName           String
+  panNumber          String?
+  vendorCode         String?
+  debarringAuthority String
+  orderNumber        String?
+  orderDate          DateTime?
+  periodFrom         DateTime
+  periodTo           DateTime
+  reason             String
+  debarmentScope     String    @default("CENTRAL_PROCUREMENT") // CENTRAL_PROCUREMENT, MINISTRY_SPECIFIC, STATE_SPECIFIC
+  sourceUrl          String?
+  sourceType         String    @default("CPPP_DOE_OFFICIAL") // CPPP_DOE_OFFICIAL, GEM_INCIDENT, GAZETTE_NOTICE, MANUAL_ENTRY
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }

@@ -1,12 +1,11 @@
 'use client';
-
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import RoleGuard from '@/components/auth/RoleGuard';
-import { Settings, Save, CheckCircle2 } from 'lucide-react';
+import { Settings, Save, CheckCircle2, RefreshCw } from 'lucide-react';
 
 export default function AdminRulesPage() {
-  const [rules, setRules] = useState([
+  const [rules, setRules] = useState<any[]>([
     { category: 'LEGAL', weight: 1.0, mandatoryImpact: 30.0, desc: 'GST, PAN, Company Registration' },
     { category: 'FINANCIAL', weight: 1.0, mandatoryImpact: 30.0, desc: 'Annual Turnover & Audited Statements' },
     { category: 'TECHNICAL', weight: 1.0, mandatoryImpact: 30.0, desc: 'OEM Authorization & Tech Specs' },
@@ -17,10 +16,45 @@ export default function AdminRulesPage() {
   ]);
 
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  useEffect(() => {
+    fetch('/api/admin/rules')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.rules?.length > 0) {
+          setRules((prev) =>
+            prev.map((pr) => {
+              const matched = data.rules.find((dr: any) => dr.category === pr.category);
+              if (matched) {
+                return { ...pr, weight: matched.weight, mandatoryImpact: matched.mandatoryImpact };
+              }
+              return pr;
+            })
+          );
+        }
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rules }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

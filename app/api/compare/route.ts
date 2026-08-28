@@ -1,33 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
-    const { bidIds } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { bidIds, tenderId } = body;
 
-    if (!bidIds || !Array.isArray(bidIds) || bidIds.length === 0) {
-      // Default to returning all available bids for comparison
-      const allBids = await prisma.bid.findMany({
-        take: 3,
-        include: {
-          tender: { include: { requirements: { orderBy: { requirementCode: 'asc' } } } },
-          complianceResults: { include: { requirement: true } },
-          documents: true,
-        },
-      });
-      return NextResponse.json({ success: true, bids: allBids });
+    const where: any = {};
+    if (tenderId && tenderId !== 'ALL') {
+      where.tenderId = tenderId;
+    }
+    if (bidIds && Array.isArray(bidIds) && bidIds.length > 0) {
+      where.id = { in: bidIds };
     }
 
     const bids = await prisma.bid.findMany({
-      where: { id: { in: bidIds } },
+      where,
+      orderBy: { submittedAt: 'desc' },
       include: {
-        tender: { include: { requirements: { orderBy: { requirementCode: 'asc' } } } },
-        complianceResults: { include: { requirement: true } },
+        tender: {
+          include: {
+            requirements: { orderBy: { requirementCode: 'asc' } },
+          },
+        },
+        complianceResults: {
+          include: { requirement: true },
+        },
         documents: true,
       },
     });
 
-    return NextResponse.json({ success: true, bids });
+    return NextResponse.json({ success: true, count: bids.length, bids });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: { message: error.message } }, { status: 500 });
   }

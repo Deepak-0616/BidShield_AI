@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Shield, ArrowRight, CheckCircle2, FileCheck, Search, Scale, FileText, AlertTriangle, Lock, Bot } from 'lucide-react';
+import { Shield, ArrowRight, CheckCircle2, FileCheck, Search, Scale, FileText, AlertTriangle, Lock, Bot, Building2, Landmark, User, Users } from 'lucide-react';
 
 export default function LandingPage() {
   return (
@@ -15,35 +15,60 @@ export default function LandingPage() {
         </div>
         <div className="flex items-center gap-4 text-slate-300">
           <span>GeM Integrated Verification</span>
-          <Link href="/login" className="text-[#F4B400] font-semibold hover:underline">Officer Login →</Link>
         </div>
       </div>
 
-      {/* Main Header */}
-      <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shadow-sm sticky top-0 z-30">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-[#0B3A5B] text-white flex items-center justify-center font-extrabold shadow">
-            <Shield className="w-6 h-6 text-[#F4B400]" />
+      {/* Main Header with Role Portal Cards */}
+      <header className="bg-white border-b border-slate-200 px-6 py-3 shadow-sm sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-[#0B3A5B] text-white flex items-center justify-center font-extrabold shadow">
+              <Shield className="w-6 h-6 text-[#F4B400]" />
+            </div>
+            <div>
+              <h1 className="text-lg font-extrabold text-[#0B3A5B] leading-none">BidShield AI</h1>
+              <p className="text-[11px] text-slate-500 font-medium">Procurement Risk Intelligence Engine</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-extrabold text-[#0B3A5B] leading-none">BidShield AI</h1>
-            <p className="text-xs text-slate-500 font-medium">Procurement Risk Intelligence Engine</p>
+
+          {/* 4 Distinct Colored Role Portal Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full md:w-auto">
+            {/* Card 1: Bidders (Coral / Pink) - Supports Registration & Login */}
+            <Link
+              href="/login/bidder"
+              className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-[#E57373] text-white shadow-sm hover:brightness-95 transition font-bold text-xs"
+            >
+              <Building2 className="w-4 h-4 shrink-0" />
+              <span>Bidders</span>
+            </Link>
+
+            {/* Card 2: Officers (Purple / Violet) - Govt Login */}
+            <Link
+              href="/login/officer"
+              className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-[#BA68C8] text-white shadow-sm hover:brightness-95 transition font-bold text-xs"
+            >
+              <Landmark className="w-4 h-4 shrink-0" />
+              <span>Officers</span>
+            </Link>
+
+            {/* Card 3: Admin (Indigo / Slate) - System Login */}
+            <Link
+              href="/login/admin"
+              className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-[#7986CB] text-white shadow-sm hover:brightness-95 transition font-bold text-xs"
+            >
+              <User className="w-4 h-4 shrink-0" />
+              <span>Admin</span>
+            </Link>
+
+            {/* Card 4: Auditors (Teal / Cyan) - Audit Login */}
+            <Link
+              href="/login/auditor"
+              className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-[#4DD0E1] text-white shadow-sm hover:brightness-95 transition font-bold text-xs"
+            >
+              <Users className="w-4 h-4 shrink-0" />
+              <span>Auditors</span>
+            </Link>
           </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/login"
-            className="px-4 py-2 text-sm font-semibold text-[#0B3A5B] hover:text-[#1261A0] transition"
-          >
-            Sign In
-          </Link>
-          <Link
-            href="/login"
-            className="px-5 py-2.5 rounded-lg bg-[#0B3A5B] text-white font-bold text-sm shadow-md hover:bg-[#082C46] transition flex items-center gap-2"
-          >
-            <span>Launch Platform Demo</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
         </div>
       </header>
 

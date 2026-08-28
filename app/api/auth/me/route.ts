@@ -27,6 +27,17 @@ export async function GET(req: NextRequest) {
       department: user.department?.name || 'Ministry Division',
       designation: user.designation,
       avatar: user.avatar,
+      gstin: user.gstin,
+      pan: user.pan,
+      companyName: user.companyName,
+      legalName: user.legalName,
+      tradeName: user.tradeName,
+      gstStatus: user.gstStatus || 'UNVERIFIED',
+      constitution: user.constitution,
+      registrationDate: user.registrationDate,
+      gstVerifiedAt: user.gstVerifiedAt,
+      gstVerificationRaw: user.gstVerificationRaw,
+      address: user.address,
     },
   });
 }

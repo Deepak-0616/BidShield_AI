@@ -3,15 +3,47 @@
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import RoleGuard from '@/components/auth/RoleGuard';
-import { Users, UserPlus, Shield, CheckCircle2 } from 'lucide-react';
+import { Users, UserPlus, Shield, CheckCircle2, RefreshCw } from 'lucide-react';
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<any[]>([
-    { id: 'u1', name: 'Rajesh Verma', email: 'admin@bidshield.demo', role: 'ADMIN', designation: 'Chief Information Officer', isActive: true },
-    { id: 'u2', name: 'Dr. Ananya Sharma', email: 'officer@bidshield.demo', role: 'PROCUREMENT_OFFICER', designation: 'Senior Procurement Officer', isActive: true },
-    { id: 'u3', name: 'Suresh Kumar', email: 'bidder@novatech.demo', role: 'BIDDER', designation: 'Bidder Signatory', isActive: true },
-    { id: 'u4', name: 'Priya Nair', email: 'auditor@bidshield.demo', role: 'AUDITOR', designation: 'Principal Auditor', isActive: true },
-  ]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchUsers = () => {
+    fetch('/api/admin/users')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setUsers(data.users);
+        }
+      })
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchUsers();
+
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/realtime');
+      eventSource.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          if (event.type === 'USER_REGISTERED') {
+            fetchUsers();
+          }
+        } catch {}
+      };
+    } catch {}
+
+    const poll = setInterval(() => fetchUsers(), 5000);
+
+    return () => {
+      if (eventSource) eventSource.close();
+      clearInterval(poll);
+    };
+  }, []);
 
   return (
     <RoleGuard allowedRoles={['ADMIN']}>

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { calculateBidRisk } from '@/lib/risk-engine';
 import { createAuditLog } from '@/lib/audit';
+import { broadcastRealtimeEvent } from '@/lib/events';
 
 export async function POST(req: NextRequest, { params }: { params: { bidId: string } }) {
   try {
@@ -132,13 +133,14 @@ export async function POST(req: NextRequest, { params }: { params: { bidId: stri
     }
 
     // Risk Calculation
+    const contradictionCount = (missingCount > 0 && nonCompliantCount > 0) ? 1 : 0;
     const riskResult = calculateBidRisk({
       totalRequirements: requirements.length,
       mandatoryRequirementsCount: mandatoryCount,
       missingMandatoryCount: missingCount,
       nonCompliantCount: nonCompliantCount,
       partialCount: partialCount,
-      contradictionCount: bid.bidderName.includes('NovaTech') ? 1 : 0,
+      contradictionCount,
       unverifiedEvidenceCount: 0,
       averageConfidence: 0.95,
       lowQualityDocumentsCount: 0,
@@ -153,6 +155,19 @@ export async function POST(req: NextRequest, { params }: { params: { bidId: stri
         riskLevel: riskResult.riskLevel,
         status: 'UNDER_REVIEW',
       },
+    });
+
+    broadcastRealtimeEvent('COMPLIANCE_EVALUATED', {
+      bidId: bid.id,
+      bidderName: bid.bidderName,
+      complianceScore: riskResult.complianceScore,
+      riskScore: riskResult.riskScore,
+      riskLevel: riskResult.riskLevel,
+    });
+    broadcastRealtimeEvent('BID_UPDATED', {
+      bidId: bid.id,
+      complianceScore: riskResult.complianceScore,
+      riskLevel: riskResult.riskLevel,
     });
 
     await createAuditLog({
