@@ -1,11 +1,11 @@
 {
-  "/login/page": "app/login/page.js",
-  "/reports/page": "app/reports/page.js",
-  "/api/auth/logout/route": "app/api/auth/logout/route.js",
-  "/login/bidder/page": "app/login/bidder/page.js",
-  "/login/officer/page": "app/login/officer/page.js",
-  "/page": "app/page.js",
-  "/api/verification/[provider]/route": "app/api/verification/[provider]/route.js",
-  "/admin/users/page": "app/admin/users/page.js",
-  "/dashboard/page": "app/dashboard/page.js"
+  "/api/tenders/route": "app/api/tenders/route.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/bids/[id]/page": "app/bids/[id]/page.js",
+  "/bids/page": "app/bids/page.js",
+  "/verification/page": "app/verification/page.js",
+  "/api/realtime/route": "app/api/realtime/route.js",
+  "/tenders/new/page": "app/tenders/new/page.js",
+  "/api/dashboard/summary/route": "app/api/dashboard/summary/route.js",
+  "/tenders/page": "app/tenders/page.js"
 }
