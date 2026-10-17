@@ -5,16 +5,18 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import {
-  Building2,
+  Shield,
   Lock,
   Mail,
   ArrowRight,
-  ArrowLeft,
-  AlertCircle,
-  CheckCircle2,
-  ShieldCheck,
+  Building2,
   User,
   FileText,
+  AlertCircle,
+  CheckCircle2,
+  RefreshCw,
+  ShieldCheck,
+  HelpCircle,
 } from 'lucide-react';
 
 export default function BidderLoginPage() {
@@ -31,14 +33,20 @@ export default function BidderLoginPage() {
   const [regGstin, setRegGstin] = useState('');
   const [fetchingGst, setFetchingGst] = useState(false);
   const [gstStatusState, setGstStatusState] = useState<
-    'IDLE' | 'FETCHING' | 'LIVE_VERIFIED' | 'STRUCTURE_VERIFIED' | 'INVALID' | 'UNAVAILABLE'
+    'IDLE' | 'FETCHING' | 'LIVE_VERIFIED' | 'STRUCTURE_VERIFIED' | 'NOT_FOUND' | 'INVALID' | 'UNAVAILABLE'
   >('IDLE');
 
+  // GST-Derived Locked Profile Fields (Populated ONLY when live provider returns actual data)
   const [gstTaxpayerData, setGstTaxpayerData] = useState<{
     legalName: string;
     tradeName: string;
     gstStatus: string;
+    constitution: string;
+    registrationDate: string;
+    registeredAddress: string;
     stateJurisdiction: string;
+    extractedPan: string;
+    isLiveVerified: boolean;
   } | null>(null);
 
   // Manual Fields
@@ -63,7 +71,7 @@ export default function BidderLoginPage() {
   // CALL GST TAXPAYER VERIFICATION API
   const handleFetchGstProfile = async (targetGstin: string) => {
     const cleanGstin = targetGstin.trim().toUpperCase();
-    if (cleanGstin.length < 15) {
+    if (cleanGstin.length !== 15) {
       setGstStatusState('IDLE');
       setGstTaxpayerData(null);
       return;
@@ -83,21 +91,41 @@ export default function BidderLoginPage() {
       const json = await res.json();
       if (json.success && json.data) {
         const data = json.data;
-        if (data.isValid || data.checksumValid || data.formatStatus === 'VALID_STRUCTURE_AND_CHECKSUM' || data.registrationStatus === 'ACTIVE') {
+        if (data.liveLookupStatus === 'LIVE_VERIFIED' && data.gstStatus === 'ACTIVE') {
           setGstStatusState('LIVE_VERIFIED');
           setGstTaxpayerData({
-            legalName: data.legalName || 'NovaTech Systems Private Limited',
-            tradeName: data.tradeName || 'NovaTech Systems',
-            gstStatus: data.registrationStatus || data.gstStatus || 'ACTIVE',
-            stateJurisdiction: data.stateJurisdiction || 'Maharashtra',
+            legalName: data.legalName || '',
+            tradeName: data.tradeName || '',
+            gstStatus: data.gstStatus || 'ACTIVE',
+            constitution: data.constitution || '',
+            registrationDate: data.registrationDate || '',
+            registeredAddress: data.registeredAddress || '',
+            stateJurisdiction: data.stateJurisdiction || '',
+            extractedPan: data.extractedPan || '',
+            isLiveVerified: true,
+          });
+        } else if (data.isValid || data.formatStatus === 'VALID_STRUCTURE_AND_CHECKSUM') {
+          // GSTIN structure is valid, but live taxpayer verification is unavailable
+          setGstStatusState('STRUCTURE_VERIFIED');
+          setGstTaxpayerData({
+            legalName: '',
+            tradeName: '',
+            gstStatus: 'UNVERIFIED',
+            constitution: '',
+            registrationDate: '',
+            registeredAddress: '',
+            stateJurisdiction: data.stateJurisdiction || '',
+            extractedPan: data.extractedPan || '',
+            isLiveVerified: false,
           });
         } else {
           setGstStatusState('INVALID');
           setGstTaxpayerData(null);
         }
       } else {
-        setGstStatusState('UNAVAILABLE');
+        setGstStatusState('INVALID');
         setGstTaxpayerData(null);
+        setError(json.error?.message || 'Invalid GSTIN');
       }
     } catch (err) {
       setGstStatusState('UNAVAILABLE');
@@ -147,7 +175,7 @@ export default function BidderLoginPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (gstStatusState !== 'LIVE_VERIFIED' && gstStatusState !== 'STRUCTURE_VERIFIED') {
-      setError('A valid GSTIN is required to register as a bidder.');
+      setError('A valid GSTIN structure is required to register as a bidder.');
       return;
     }
 
@@ -185,31 +213,21 @@ export default function BidderLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F7F4] flex flex-col justify-between">
-      {/* Top Banner */}
-      <div className="bg-[#138A4B] text-white text-xs py-2.5 px-6 flex items-center justify-between border-b border-[#0f6f3c]">
-        <div className="flex items-center gap-2">
-          <Link href="/" className="flex items-center gap-1.5 hover:underline text-white font-bold">
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Home</span>
-          </Link>
-          <span>•</span>
-          <span className="font-extrabold text-[#F4B400]">SIH26100</span>
-          <span>• Bidder & Vendor Self-Service Portal</span>
-        </div>
-        <span className="text-emerald-100 text-[11px]">GeM Vendor Verification & Submissions</span>
-      </div>
+    <div className="min-h-screen bg-slate-900 flex flex-col justify-center py-10 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Background Graphic */}
+      <div className="absolute inset-0 z-0 opacity-10 bg-[radial-gradient(#E57373_1px,transparent_1px)] [background-size:16px_16px]"></div>
 
-      {/* Main Container */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-emerald-100 overflow-hidden gold-accent-border">
-          {/* Header */}
-          <div className="bg-[#138A4B] p-8 text-white text-center">
-            <div className="w-12 h-12 rounded-xl bg-[#F4B400] text-[#0B3A5B] flex items-center justify-center font-black mx-auto mb-3 shadow">
-              <Building2 className="w-7 h-7" />
+      <div className="sm:mx-auto sm:w-full sm:max-w-xl relative z-10">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+          {/* Header Banner */}
+          <div className="bg-[#D32F2F] p-6 text-center text-white relative">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center mx-auto mb-3 text-white shadow-inner">
+              <Building2 className="w-6 h-6 stroke-[2.5]" />
             </div>
-            <h2 className="text-xl font-bold">Bidder & Vendor Portal</h2>
-            <p className="text-xs text-emerald-100 mt-1">Statutory GSTIN Verification & Tender Submission</p>
+            <h1 className="text-xl font-black tracking-tight">Bidder & Supplier Registration Portal</h1>
+            <p className="text-xs text-red-100 mt-1">
+              Statutory GSTIN Verification & Tender Submission Engine
+            </p>
           </div>
 
           {/* Toggle Tabs */}
@@ -218,7 +236,7 @@ export default function BidderLoginPage() {
               onClick={() => setMode('LOGIN')}
               className={`flex-1 py-3 text-center transition ${
                 mode === 'LOGIN'
-                  ? 'border-b-2 border-[#138A4B] text-[#138A4B] bg-emerald-50/50'
+                  ? 'border-b-2 border-[#D32F2F] text-[#D32F2F] bg-red-50/50'
                   : 'text-slate-500 hover:text-slate-700 bg-slate-50'
               }`}
             >
@@ -228,23 +246,23 @@ export default function BidderLoginPage() {
               onClick={() => setMode('REGISTER')}
               className={`flex-1 py-3 text-center transition ${
                 mode === 'REGISTER'
-                  ? 'border-b-2 border-[#138A4B] text-[#138A4B] bg-emerald-50/50'
+                  ? 'border-b-2 border-[#D32F2F] text-[#D32F2F] bg-red-50/50'
                   : 'text-slate-500 hover:text-slate-700 bg-slate-50'
               }`}
             >
-              Register Account (GSTIN)
+              Create Account (GSTIN-First)
             </button>
           </div>
 
           {error && (
-            <div className="m-6 mb-0 p-3 bg-red-50 border border-red-200 text-[#C62828] text-xs font-semibold flex items-center gap-2 rounded-lg">
+            <div className="m-6 mb-0 p-3 bg-red-50 border border-red-200 text-[#C62828] text-xs font-bold rounded-lg flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
           {successMsg && (
-            <div className="m-6 mb-0 p-3 bg-green-50 border border-green-200 text-[#138A4B] text-xs font-semibold flex items-center gap-2 rounded-lg">
+            <div className="m-6 mb-0 p-3 bg-green-50 border border-green-200 text-[#138A4B] text-xs font-bold rounded-lg flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>{successMsg}</span>
             </div>
@@ -252,9 +270,9 @@ export default function BidderLoginPage() {
 
           {/* SIGN IN FORM */}
           {mode === 'LOGIN' && (
-            <form onSubmit={handleLogin} className="p-8 space-y-5">
+            <form onSubmit={handleLogin} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Bidder Email Address
                 </label>
                 <div className="relative">
@@ -264,14 +282,14 @@ export default function BidderLoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-[#138A4B] focus:border-transparent outline-none transition"
+                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-[#D32F2F] outline-none transition"
                     placeholder="bidder@novatech.demo"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Password
                 </label>
                 <div className="relative">
@@ -281,7 +299,7 @@ export default function BidderLoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-[#138A4B] focus:border-transparent outline-none transition"
+                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-[#D32F2F] outline-none transition"
                     placeholder="••••••••"
                   />
                 </div>
@@ -290,26 +308,31 @@ export default function BidderLoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 bg-[#138A4B] text-white font-bold rounded-lg hover:bg-[#0f6f3c] transition shadow-md flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                className="w-full py-3 px-4 bg-[#D32F2F] text-white font-bold rounded-lg hover:bg-[#b71c1c] transition shadow-md flex items-center justify-center gap-2 text-sm disabled:opacity-50"
               >
-                {loading ? 'Authenticating...' : 'Sign In to Bidder Console'}
+                {loading ? 'Signing in...' : 'Sign In to Bidder Console'}
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-              <div className="p-3 bg-emerald-50/70 rounded-lg border border-emerald-100 text-[11px] text-slate-600">
-                <span className="font-bold text-[#138A4B] block mb-1">Pre-Provisioned Bidder Credentials:</span>
+              <div className="p-3 bg-red-50/70 rounded-lg border border-red-100 text-[11px] text-slate-600">
+                <span className="font-bold text-red-900 block mb-1">Demo Credentials:</span>
                 <code>bidder@novatech.demo</code> / <code>Bidder@123</code>
               </div>
             </form>
           )}
 
-          {/* REGISTRATION FORM */}
+          {/* REGISTRATION FORM (GSTIN IS SOURCE OF TRUTH) */}
           {mode === 'REGISTER' && (
-            <form onSubmit={handleRegister} className="p-8 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  GSTIN (15-Digit GST Number)
-                </label>
+            <form onSubmit={handleRegister} className="p-6 pt-4 space-y-4">
+              {/* 1. GSTIN INPUT & STATUS */}
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-black text-[#0B3A5B] uppercase tracking-wider">
+                    1. Enter GSTIN (Statutory Identifier)
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-semibold">15 Characters</span>
+                </div>
+
                 <div className="relative">
                   <FileText className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                   <input
@@ -318,86 +341,233 @@ export default function BidderLoginPage() {
                     onChange={handleGstinChange}
                     maxLength={15}
                     required
-                    className="w-full pl-9 pr-20 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold uppercase focus:ring-2 focus:ring-[#138A4B] outline-none"
-                    placeholder="27AAACN1234Q1Z5"
+                    className="w-full pl-9 pr-24 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-mono font-bold uppercase focus:ring-2 focus:ring-[#D32F2F] outline-none tracking-wider"
+                    placeholder="e.g. 29AADFV7589C1ZX"
                   />
                   <button
                     type="button"
                     onClick={() => handleFetchGstProfile(regGstin)}
                     disabled={fetchingGst || regGstin.length !== 15}
-                    className="absolute right-1.5 top-1.5 px-3 py-1 bg-[#138A4B] text-white text-[10px] font-bold rounded hover:bg-[#0f6f3c] transition disabled:opacity-40"
+                    className="absolute right-1.5 top-1.5 px-3 py-1.5 bg-[#0B3A5B] text-white text-[11px] font-bold rounded-md hover:bg-[#082C46] transition disabled:opacity-40"
                   >
-                    {fetchingGst ? 'Verifying...' : 'Verify'}
+                    {fetchingGst ? 'Fetching...' : 'Verify'}
                   </button>
                 </div>
-              </div>
 
-              {gstStatusState === 'LIVE_VERIFIED' && gstTaxpayerData && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-xs font-bold text-[#138A4B] space-y-1">
-                  <div className="flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 shrink-0 text-[#138A4B]" />
-                    <span>GSTIN Verified Active Taxpayer</span>
+                {/* Status Indicator */}
+                {gstStatusState === 'FETCHING' && (
+                  <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-xs font-bold text-[#1261A0] flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
+                    <span>Fetching GST profile...</span>
                   </div>
-                  <p className="text-[11px] text-slate-700 font-semibold">{gstTaxpayerData.legalName}</p>
-                </div>
-              )}
+                )}
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Authorized Signatory Name
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    value={regContactPerson}
-                    onChange={(e) => setRegContactPerson(e.target.value)}
-                    required
-                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-[#138A4B] outline-none"
-                    placeholder="e.g. Suresh Kumar"
-                  />
+                {gstStatusState === 'LIVE_VERIFIED' && gstTaxpayerData && (
+                  <div className="p-2.5 bg-green-50 border border-green-200 rounded-lg text-xs font-bold text-[#138A4B] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 shrink-0 text-[#138A4B]" />
+                      <span>GSTIN Verified • Live Taxpayer Master Active</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-[#138A4B] text-white text-[10px] font-black">
+                      ACTIVE
+                    </span>
+                  </div>
+                )}
+
+                {gstStatusState === 'STRUCTURE_VERIFIED' && (
+                  <div className="p-2.5 bg-slate-100 border border-slate-300 rounded-lg text-xs font-bold text-slate-700 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-[#0B3A5B]">
+                        <CheckCircle2 className="w-4 h-4 text-[#138A4B] shrink-0" />
+                        <span>GSTIN structure valid</span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px] font-bold">
+                        UNVERIFIED
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-normal text-slate-500 pl-5.5">
+                      Live taxpayer verification unavailable / Unverified.
+                    </p>
+                  </div>
+                )}
+
+                {gstStatusState === 'NOT_FOUND' && (
+                  <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs font-bold text-amber-800 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                    <span>GSTIN not found in Taxpayer Registry</span>
+                  </div>
+                )}
+
+                {gstStatusState === 'INVALID' && (
+                  <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs font-bold text-[#C62828] flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-[#C62828]" />
+                    <span>GSTIN checksum or statutory structure invalid</span>
+                  </div>
+                )}
+
+                {gstStatusState === 'UNAVAILABLE' && (
+                  <div className="p-2.5 bg-slate-100 border border-slate-300 rounded-lg text-xs font-bold text-slate-700 flex items-center gap-2">
+                    <HelpCircle className="w-4 h-4 shrink-0 text-slate-500" />
+                    <span>Live taxpayer verification unavailable / Unverified</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. GST-DERIVED COMPANY DETAILS (LOCKED / NON-EDITABLE) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-1">
+                  <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-slate-400" />
+                    <span>2. GST-Derived Company Details (Locked / Read-Only)</span>
+                  </h3>
+                  {gstStatusState === 'LIVE_VERIFIED' && (
+                    <span className="text-[10px] text-[#138A4B] font-bold bg-green-50 px-2 py-0.5 rounded border border-green-200">
+                      Source: Live GST API
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1 flex items-center gap-1">
+                      <span>Legal Name</span>
+                      <Lock className="w-3 h-3 text-slate-400" />
+                    </label>
+                    <input
+                      type="text"
+                      value={gstTaxpayerData?.legalName || ''}
+                      readOnly
+                      placeholder={gstStatusState === 'STRUCTURE_VERIFIED' ? 'Pending live taxpayer lookup' : ''}
+                      className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs font-bold text-[#0B3A5B] cursor-not-allowed outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1 flex items-center gap-1">
+                      <span>Trade Name</span>
+                      <Lock className="w-3 h-3 text-slate-400" />
+                    </label>
+                    <input
+                      type="text"
+                      value={gstTaxpayerData?.tradeName || ''}
+                      readOnly
+                      placeholder={gstStatusState === 'STRUCTURE_VERIFIED' ? 'Pending live taxpayer lookup' : ''}
+                      className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 cursor-not-allowed outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1 flex items-center gap-1">
+                      <span>Constitution / Business Type</span>
+                      <Lock className="w-3 h-3 text-slate-400" />
+                    </label>
+                    <input
+                      type="text"
+                      value={gstTaxpayerData?.constitution || ''}
+                      readOnly
+                      placeholder={gstStatusState === 'STRUCTURE_VERIFIED' ? 'Pending live taxpayer lookup' : ''}
+                      className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 cursor-not-allowed outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1 flex items-center gap-1">
+                      <span>State / Jurisdiction</span>
+                      <Lock className="w-3 h-3 text-slate-400" />
+                    </label>
+                    <input
+                      type="text"
+                      value={gstTaxpayerData?.stateJurisdiction || ''}
+                      readOnly
+                      placeholder={gstStatusState === 'STRUCTURE_VERIFIED' ? 'Pending live taxpayer lookup' : ''}
+                      className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 cursor-not-allowed outline-none"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1 flex items-center gap-1">
+                      <span>Registered Address</span>
+                      <Lock className="w-3 h-3 text-slate-400" />
+                    </label>
+                    <input
+                      type="text"
+                      value={gstTaxpayerData?.registeredAddress || ''}
+                      readOnly
+                      placeholder={gstStatusState === 'STRUCTURE_VERIFIED' ? 'Pending live taxpayer lookup' : ''}
+                      className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 cursor-not-allowed outline-none"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Official Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="email"
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    required
-                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-[#138A4B] outline-none"
-                    placeholder="bidder@company.com"
-                  />
+              {/* 3. MANUAL CREDENTIALS & CONTACT INFO */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-1">
+                  <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-slate-400" />
+                    <span>3. Authorized Contact Person & Login Credentials (Manual Fields)</span>
+                  </h3>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Security Password
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="password"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-[#138A4B] outline-none"
-                    placeholder="••••••••"
-                  />
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Authorized Contact Person Name
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      value={regContactPerson}
+                      onChange={(e) => setRegContactPerson(e.target.value)}
+                      required
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:bg-white focus:ring-2 focus:ring-[#D32F2F] outline-none"
+                      placeholder="e.g. Rajesh Sharma"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Official Email Address
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="email"
+                        value={regEmail}
+                        onChange={(e) => setRegEmail(e.target.value)}
+                        required
+                        className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:bg-white focus:ring-2 focus:ring-[#D32F2F] outline-none"
+                        placeholder="vendor@company.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Password (min. 6 characters)
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="password"
+                        value={regPassword}
+                        onChange={(e) => setRegPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:bg-white focus:ring-2 focus:ring-[#D32F2F] outline-none"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full py-3 px-4 bg-[#138A4B] text-white font-bold rounded-lg hover:bg-[#0f6f3c] transition shadow-md flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                disabled={loading || (gstStatusState !== 'LIVE_VERIFIED' && gstStatusState !== 'STRUCTURE_VERIFIED')}
+                className="w-full py-3 px-4 bg-[#D32F2F] text-white font-bold rounded-lg hover:bg-[#b71c1c] transition shadow-md flex items-center justify-center gap-2 text-xs disabled:opacity-50 mt-3"
               >
                 {loading ? 'Creating Account...' : 'Register Bidder Account'}
                 <CheckCircle2 className="w-4 h-4" />
@@ -408,7 +578,7 @@ export default function BidderLoginPage() {
           {/* Footer Navigation */}
           <div className="p-4 bg-slate-50 border-t border-slate-200 text-center text-xs text-slate-500 flex justify-between">
             <Link href="/" className="text-slate-600 hover:underline">← Back to Portal</Link>
-            <Link href="/login/officer" className="text-[#138A4B] font-bold hover:underline">Officer Login →</Link>
+            <Link href="/login/officer" className="text-[#1261A0] font-semibold hover:underline">Officer Login →</Link>
           </div>
         </div>
       </div>
